@@ -172,24 +172,32 @@ class ImportRepository:
                           item.get("excise_duty_per_unit") or 0,
                           data["invoice_date"], invoice_id))
 
-                product_id = cur.execute(
-                    "SELECT product_id FROM supplier_products WHERE id = %s", (sp_id,)
-                ).fetchone()["product_id"]
+                product_row = cur.execute("""
+                    SELECT sp.product_id,
+                           COALESCE(pc.is_service, FALSE) AS is_service
+                    FROM supplier_products sp
+                    JOIN products p ON p.id = sp.product_id
+                    LEFT JOIN product_categories pc ON pc.id = p.category_id
+                    WHERE sp.id = %s
+                """, (sp_id,)).fetchone()
+                product_id = product_row["product_id"]
+                is_service_item = product_row["is_service"]
 
-                post_movements(
-                    cur.connection,
-                    [{
-                        "product_id": product_id,
-                        "location_id": item.get("location_id") or 1,
-                        "movement_type": "return_to_supplier" if is_credit else "purchase_receipt",
-                        "quantity": -qty if is_credit else qty,
-                        "unit_id": line_unit_id,
-                        "reference_id": invoice_line_id,
-                        "reference_type": "invoice_line",
-                        "moved_at": data["invoice_date"],
-                    }],
-                    commit=False,
-                )
+                if not is_service_item:
+                    post_movements(
+                        cur.connection,
+                        [{
+                            "product_id": product_id,
+                            "location_id": item.get("location_id") or 1,
+                            "movement_type": "return_to_supplier" if is_credit else "purchase_receipt",
+                            "quantity": -qty if is_credit else qty,
+                            "unit_id": line_unit_id,
+                            "reference_id": invoice_line_id,
+                            "reference_type": "invoice_line",
+                            "moved_at": data["invoice_date"],
+                        }],
+                        commit=False,
+                    )
 
         return invoice_id, warnings
 

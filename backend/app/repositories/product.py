@@ -6,9 +6,9 @@ from ..protocols import DBConnection
 
 _SORT_COLS = {
     "name":     "p.name",
-    "sku":      "ps.supplier_sku",
+    "sku":      "pa.supplier_sku",
     "category": "pc.name",
-    "price":    "ps.current_price",
+    "price":    "pa.current_price",
 }
 
 
@@ -58,16 +58,25 @@ class ProductRepository:
             where = "WHERE p.category_id != %s OR p.category_id IS NULL"
             params = [exclude_category_id]
         rows = self.db.execute(f"""
+            WITH ps AS (
+                SELECT DISTINCT ON (sp.product_id)
+                    sp.product_id,
+                    sp.supplier_sku,
+                    sp.current_price,
+                    COALESCE(NULLIF(s.trade_name,''), s.name) AS supplier
+                FROM supplier_products sp
+                LEFT JOIN suppliers s ON s.id = sp.supplier_id
+                ORDER BY sp.product_id, sp.is_preferred_supplier DESC, sp.current_price ASC NULLS LAST
+            )
             SELECT p.id, p.name,
                    COALESCE(p.units_per_pack, 1) AS units_per_pack,
                    uom.abbreviation              AS unit,
-                   COALESCE(
-                       (SELECT MIN(sp.current_price)
-                        FROM supplier_products sp WHERE sp.product_id = p.id
-                        AND sp.current_price IS NOT NULL), 0
-                   ) AS current_price
+                   COALESCE(ps.current_price, 0) AS current_price,
+                   ps.supplier,
+                   ps.supplier_sku
             FROM products p
             LEFT JOIN units_of_measure uom ON uom.id = p.unit_id
+            LEFT JOIN ps ON ps.product_id = p.id
             {where}
             ORDER BY p.name
         """, params if params else None).fetchall()
@@ -77,12 +86,25 @@ class ProductRepository:
         row = self.db.execute("""
             WITH preferred_supplier AS (
                 SELECT DISTINCT ON (sp.product_id)
-                    sp.product_id, sp.id AS supplier_product_id, sp.supplier_sku,
-                    sp.current_price, sp.total_quantity_ordered,
+                    sp.product_id, sp.id AS supplier_product_id,
                     COALESCE(NULLIF(s.trade_name,''), s.name) AS supplier
                 FROM supplier_products sp
                 LEFT JOIN suppliers s ON s.id = sp.supplier_id
-                ORDER BY sp.product_id, sp.is_preferred_supplier DESC, sp.current_price ASC
+                ORDER BY sp.product_id, sp.is_preferred_supplier DESC, sp.current_price ASC NULLS LAST
+            ),
+            product_agg AS (
+                SELECT
+                    sp.product_id,
+                    SUM(sp.total_quantity_ordered)            AS total_quantity_ordered,
+                    CASE
+                        WHEN COUNT(DISTINCT sp.supplier_sku)
+                             FILTER (WHERE sp.supplier_sku IS NOT NULL AND sp.supplier_sku <> '') > 1
+                        THEN 'Multi'
+                        ELSE MAX(CASE WHEN sp.supplier_sku IS NOT NULL AND sp.supplier_sku <> ''
+                                      THEN sp.supplier_sku END)
+                    END AS supplier_sku
+                FROM supplier_products sp
+                GROUP BY sp.product_id
             )
             SELECT p.id, p.name, p.description, p.volume_ml, p.abv_percent,
                    p.units_per_pack, p.pack_unit_size_ml,
@@ -94,15 +116,53 @@ class ProductRepository:
                    puom.abbreviation          AS pack_unit,
                    ps.supplier,
                    ps.supplier_product_id,
-                   ps.supplier_sku, ps.current_price, ps.total_quantity_ordered
+                   pa.supplier_sku,
+                   pa.total_quantity_ordered,
+                   (SELECT il.unit_price
+                    FROM invoice_lines il
+                    JOIN supplier_products sp2 ON sp2.id = il.supplier_product_id
+                    JOIN invoices i            ON i.id  = il.invoice_id
+                    WHERE sp2.product_id = p.id AND i.invoice_type = 'invoice'
+                    ORDER BY i.invoice_date DESC, i.id DESC, il.id DESC
+                    LIMIT 1)                  AS current_price
             FROM products p
             LEFT JOIN preferred_supplier ps ON ps.product_id = p.id
-            LEFT JOIN product_categories pc   ON pc.id  = p.category_id
-            LEFT JOIN units_of_measure uom    ON uom.id = p.unit_id
-            LEFT JOIN units_of_measure puom   ON puom.id = p.pack_unit_id
+            LEFT JOIN product_agg pa        ON pa.product_id = p.id
+            LEFT JOIN product_categories pc ON pc.id  = p.category_id
+            LEFT JOIN units_of_measure uom  ON uom.id = p.unit_id
+            LEFT JOIN units_of_measure puom ON puom.id = p.pack_unit_id
             WHERE p.id = %s
         """, (product_id,)).fetchone()
         return dict(row) if row else None
+
+    def _category_descendant_ids(self, category_id: int | str) -> list[int]:
+        rows = self.db.execute("""
+            WITH RECURSIVE cat_tree AS (
+                SELECT id FROM product_categories WHERE id = %s
+                UNION ALL
+                SELECT pc.id FROM product_categories pc
+                JOIN cat_tree ct ON ct.id = pc.parent_id
+            )
+            SELECT id FROM cat_tree
+        """, (int(category_id),)).fetchall()
+        return [r["id"] for r in rows]
+
+    def get_product_supplier_variants(self, product_id: int) -> list[dict]:
+        rows = self.db.execute("""
+            SELECT sp.id AS supplier_product_id,
+                   sp.supplier_id,
+                   COALESCE(NULLIF(s.trade_name,''), s.name) AS supplier_name,
+                   sp.supplier_sku,
+                   sp.supplier_product_name,
+                   sp.current_price,
+                   sp.is_preferred_supplier,
+                   sp.total_quantity_ordered
+            FROM supplier_products sp
+            JOIN suppliers s ON s.id = sp.supplier_id
+            WHERE sp.product_id = %s
+            ORDER BY sp.is_preferred_supplier DESC, sp.current_price ASC NULLS LAST
+        """, (product_id,)).fetchall()
+        return [dict(r) for r in rows]
 
     def search(
         self,
@@ -118,7 +178,7 @@ class ProductRepository:
         order_col = _SORT_COLS.get(sort_by, "p.name")
         direction = "DESC" if sort_dir.lower() == "desc" else "ASC"
 
-        where:  list[str] = ["1=1"]
+        where:  list[str] = ["COALESCE(pc.is_service, FALSE) = FALSE"]
         params: list      = []
 
         if q:
@@ -129,8 +189,10 @@ class ProductRepository:
             )
             params += [f"%{q}%", f"%{q}%", f"%{q}%"]
         if category_id:
-            where.append("p.category_id = %s")
-            params.append(category_id)
+            cat_ids = self._category_descendant_ids(category_id)
+            placeholders = ", ".join(["%s"] * len(cat_ids))
+            where.append(f"p.category_id IN ({placeholders})")
+            params.extend(cat_ids)
 
         sql_where = " AND ".join(where)
 
@@ -145,11 +207,13 @@ class ProductRepository:
             count_params.append(supplier_id)
 
         total = self.db.execute(
-            f"SELECT COUNT(*) FROM products p WHERE {' AND '.join(count_where)}",
+            f"SELECT COUNT(*) FROM products p LEFT JOIN product_categories pc ON pc.id = p.category_id WHERE {' AND '.join(count_where)}",
             count_params if count_params else None,
         ).fetchone()[0]
 
-        # --- Supplier CTE (DISTINCT ON picks one preferred/cheapest supplier per product) ---
+        # --- Supplier CTEs ---
+        # preferred_supplier: one row per product for display name + supplier_product_id
+        # product_agg: aggregated SKU label, avg price, total qty across all suppliers
         cte_where = ""
         cte_params: list = []
         if supplier_id:
@@ -161,13 +225,28 @@ class ProductRepository:
         rows = self.db.execute(f"""
             WITH preferred_supplier AS (
                 SELECT DISTINCT ON (sp.product_id)
-                    sp.product_id, sp.id AS supplier_product_id, sp.supplier_sku,
-                    sp.current_price, sp.total_quantity_ordered,
+                    sp.product_id, sp.id AS supplier_product_id,
                     COALESCE(NULLIF(s.trade_name,''), s.name) AS supplier
                 FROM supplier_products sp
                 LEFT JOIN suppliers s ON s.id = sp.supplier_id
                 {cte_where}
-                ORDER BY sp.product_id, sp.is_preferred_supplier DESC, sp.current_price ASC
+                ORDER BY sp.product_id, sp.is_preferred_supplier DESC, sp.current_price ASC NULLS LAST
+            ),
+            product_agg AS (
+                SELECT
+                    sp.product_id,
+                    ROUND(AVG(sp.current_price) FILTER (WHERE sp.current_price IS NOT NULL)::numeric, 4)
+                        AS current_price,
+                    SUM(sp.total_quantity_ordered) AS total_quantity_ordered,
+                    CASE
+                        WHEN COUNT(DISTINCT sp.supplier_sku)
+                             FILTER (WHERE sp.supplier_sku IS NOT NULL AND sp.supplier_sku <> '') > 1
+                        THEN 'Multi'
+                        ELSE MAX(CASE WHEN sp.supplier_sku IS NOT NULL AND sp.supplier_sku <> ''
+                                      THEN sp.supplier_sku END)
+                    END AS supplier_sku
+                FROM supplier_products sp
+                GROUP BY sp.product_id
             )
             SELECT p.id, p.name, p.description, p.volume_ml, p.abv_percent,
                    p.units_per_pack, p.pack_unit_size_ml,
@@ -179,12 +258,13 @@ class ProductRepository:
                    puom.abbreviation          AS pack_unit,
                    ps.supplier,
                    ps.supplier_product_id,
-                   ps.supplier_sku, ps.current_price, ps.total_quantity_ordered
+                   pa.supplier_sku, pa.current_price, pa.total_quantity_ordered
             FROM products p
             LEFT JOIN preferred_supplier ps ON ps.product_id = p.id
-            LEFT JOIN product_categories pc   ON pc.id  = p.category_id
-            LEFT JOIN units_of_measure uom    ON uom.id = p.unit_id
-            LEFT JOIN units_of_measure puom   ON puom.id = p.pack_unit_id
+            LEFT JOIN product_agg pa        ON pa.product_id = p.id
+            LEFT JOIN product_categories pc ON pc.id  = p.category_id
+            LEFT JOIN units_of_measure uom  ON uom.id = p.unit_id
+            LEFT JOIN units_of_measure puom ON puom.id = p.pack_unit_id
             WHERE {sql_where}
             ORDER BY {order_col} {direction} NULLS LAST
             LIMIT %s OFFSET %s
@@ -249,6 +329,73 @@ class ProductRepository:
                 "UPDATE supplier_products SET supplier_sku=%s WHERE id=%s",
                 (supplier_sku, supplier_product_id),
             )
+        self.db.commit()
+
+    def update_supplier_variant(
+        self,
+        supplier_product_id: int,
+        supplier_sku: str | None,
+        supplier_product_name: str | None,
+        is_preferred_supplier: int | None,
+    ) -> None:
+        cur = self.db.cursor()
+        if is_preferred_supplier == 1:
+            cur.execute(
+                "UPDATE supplier_products SET is_preferred_supplier = 0 "
+                "WHERE product_id = (SELECT product_id FROM supplier_products WHERE id = %s)",
+                (supplier_product_id,),
+            )
+        sets: list[str] = []
+        params: list = []
+        if supplier_sku is not None:
+            sets.append("supplier_sku = %s")
+            params.append(supplier_sku or None)
+        if supplier_product_name is not None:
+            sets.append("supplier_product_name = %s")
+            params.append(supplier_product_name or None)
+        if is_preferred_supplier is not None:
+            sets.append("is_preferred_supplier = %s")
+            params.append(is_preferred_supplier)
+        if not sets:
+            return
+        sets.append("updated_at = NOW()")
+        params.append(supplier_product_id)
+        cur.execute(f"UPDATE supplier_products SET {', '.join(sets)} WHERE id = %s", params)
+        self.db.commit()
+
+    def delete_product(self, product_id: int) -> None:
+        inv_cnt = self.db.execute("""
+            SELECT COUNT(*) FROM invoice_lines il
+            JOIN supplier_products sp ON sp.id = il.supplier_product_id
+            WHERE sp.product_id = %s
+        """, (product_id,)).fetchone()[0]
+        if inv_cnt:
+            raise ValueError(f"Product has {inv_cnt} invoice line(s) — cannot delete")
+
+        mov_cnt = self.db.execute(
+            "SELECT COUNT(*) FROM stock_movements WHERE product_id = %s",
+            (product_id,),
+        ).fetchone()[0]
+        if mov_cnt:
+            raise ValueError(f"Product has {mov_cnt} stock movement(s) — cannot delete")
+
+        cur = self.db.cursor()
+        cur.execute("""
+            DELETE FROM price_history
+            WHERE supplier_product_id IN (
+                SELECT id FROM supplier_products WHERE product_id = %s
+            )
+        """, (product_id,))
+        cur.execute("DELETE FROM supplier_products WHERE product_id = %s", (product_id,))
+        cur.execute("DELETE FROM inventory_balances WHERE product_id = %s", (product_id,))
+        cur.execute("DELETE FROM stock_count_lines WHERE product_id = %s", (product_id,))
+        cur.execute(
+            "DELETE FROM composite_product_components WHERE component_product_id = %s",
+            (product_id,),
+        )
+        cur.execute("DELETE FROM recipe_yields WHERE yield_product_id = %s", (product_id,))
+        cur.execute("DELETE FROM transfer_lines WHERE product_id = %s", (product_id,))
+        cur.execute("DELETE FROM products WHERE id = %s", (product_id,))
         self.db.commit()
 
     def merge_products(self, source_id: int, target_id: int) -> None:
@@ -342,11 +489,11 @@ class ProductRepository:
 
     def list_categories(self) -> list[dict]:
         rows = self.db.execute(
-            "SELECT id, name, parent_id FROM product_categories ORDER BY name"
+            "SELECT id, name, parent_id, COALESCE(is_service, FALSE) AS is_service FROM product_categories ORDER BY name"
         ).fetchall()
         return [dict(r) for r in rows]
 
-    def create_category(self, name: str, parent_id: int | None) -> dict:
+    def create_category(self, name: str, parent_id: int | None, is_service: bool = False) -> dict:
         existing = self.db.execute(
             "SELECT id FROM product_categories WHERE lower(name) = lower(%s)", (name,)
         ).fetchone()
@@ -354,13 +501,13 @@ class ProductRepository:
             raise ValueError(f"A category named '{name}' already exists")
         cur = self.db.cursor()
         cur.execute(
-            "INSERT INTO product_categories (name, parent_id) VALUES (%s, %s)",
-            (name, parent_id),
+            "INSERT INTO product_categories (name, parent_id, is_service) VALUES (%s, %s, %s)",
+            (name, parent_id, is_service),
         )
         self.db.commit()
-        return {"id": cur.lastrowid, "name": name, "parent_id": parent_id}
+        return {"id": cur.lastrowid, "name": name, "parent_id": parent_id, "is_service": is_service}
 
-    def update_category(self, cat_id: int, name: str, parent_id: int | None) -> None:
+    def update_category(self, cat_id: int, name: str, parent_id: int | None, is_service: bool = False) -> None:
         existing = self.db.execute(
             "SELECT id FROM product_categories WHERE lower(name) = lower(%s) AND id != %s",
             (name, cat_id),
@@ -368,8 +515,8 @@ class ProductRepository:
         if existing:
             raise ValueError(f"A category named '{name}' already exists")
         self.db.execute(
-            "UPDATE product_categories SET name=%s, parent_id=%s WHERE id=%s",
-            (name, parent_id, cat_id),
+            "UPDATE product_categories SET name=%s, parent_id=%s, is_service=%s WHERE id=%s",
+            (name, parent_id, is_service, cat_id),
         )
         self.db.commit()
 
@@ -417,7 +564,9 @@ class ProductRepository:
                 )) AS cost
             FROM products p
             LEFT JOIN inventory_balances ib ON ib.product_id = p.id
+            LEFT JOIN product_categories pc ON pc.id = p.category_id
             WHERE p.is_active = 1
+              AND COALESCE(pc.is_service, FALSE) = FALSE
             GROUP BY p.id, p.units_per_pack
         """).fetchall()]
 
@@ -455,6 +604,8 @@ class ProductRepository:
                 FROM inventory_balances
                 GROUP BY product_id
             ) b ON b.product_id = p.id
+            LEFT JOIN product_categories pc ON pc.id = p.category_id
+            WHERE COALESCE(pc.is_service, FALSE) = FALSE
         """).fetchone()
         r = dict(row) if row else {}
         return {
@@ -470,7 +621,9 @@ class ProductRepository:
         rows = self.db.execute("""
             WITH RECURSIVE cat_root AS (
                 SELECT id, name AS root_name, id AS root_id
-                FROM product_categories WHERE parent_id IS NULL
+                FROM product_categories
+                WHERE parent_id IS NULL
+                  AND COALESCE(is_service, FALSE) = FALSE
                 UNION ALL
                 SELECT c.id, cr.root_name, cr.root_id
                 FROM product_categories c
@@ -556,6 +709,51 @@ class ProductRepository:
         rows = self.db.execute(
             "SELECT id, name, abbreviation FROM units_of_measure ORDER BY name"
         ).fetchall()
+        return [dict(r) for r in rows]
+
+
+    def get_service_lines(
+        self,
+        category_id: int | None = None,
+        supplier_id: int | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> list[dict]:
+        where: list[str] = ["COALESCE(pc.is_service, FALSE) = TRUE"]
+        params: list = []
+
+        if category_id:
+            where.append("pc.id = %s")
+            params.append(category_id)
+        if supplier_id:
+            where.append("i.supplier_id = %s")
+            params.append(supplier_id)
+        if date_from:
+            where.append("i.invoice_date >= %s")
+            params.append(date_from)
+        if date_to:
+            where.append("i.invoice_date <= %s")
+            params.append(date_to)
+
+        rows = self.db.execute(f"""
+            SELECT
+                il.id        AS invoice_line_id,
+                i.invoice_date, i.invoice_number, i.invoice_type,
+                s.name       AS supplier_name,
+                p.name       AS service_name,
+                pc.id        AS category_id,
+                pc.name      AS category_name,
+                il.quantity, il.unit_price,
+                il.line_net_amount, il.line_gross_amount
+            FROM invoice_lines il
+            JOIN invoices i            ON i.id  = il.invoice_id
+            JOIN suppliers s           ON s.id  = i.supplier_id
+            JOIN supplier_products sp  ON sp.id = il.supplier_product_id
+            JOIN products p            ON p.id  = sp.product_id
+            JOIN product_categories pc ON pc.id = p.category_id
+            WHERE {' AND '.join(where)}
+            ORDER BY i.invoice_date DESC, i.id DESC, il.id
+        """, params if params else None).fetchall()
         return [dict(r) for r in rows]
 
 

@@ -548,7 +548,8 @@ export default function Import() {
                               const hits = it.supplierProducts.filter(p =>
                                 !searchTerm ||
                                 p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                (p.supplier_sku ?? '').toLowerCase().includes(searchTerm.toLowerCase())
+                                (p.supplier_sku ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                (p.supplier_product_name ?? '').toLowerCase().includes(searchTerm.toLowerCase())
                               ).slice(0, 30)
                               return (
                                 <tr key={j}>
@@ -590,6 +591,9 @@ export default function Import() {
                                                 style={{ padding: '6px 10px', cursor: 'pointer', fontSize: '13px', borderBottom: '1px solid #f3f4f6' }}>
                                                 <div style={{ fontWeight: 500 }}>{p.name}</div>
                                                 <div style={{ fontSize: '11px', color: '#6b7280' }}>
+                                                  {p.supplier_product_name && p.supplier_product_name !== p.name && (
+                                                    <span style={{ color: '#4f46e5' }}>alias: {p.supplier_product_name} · </span>
+                                                  )}
                                                   {p.supplier_sku && <span>SKU: {p.supplier_sku} · </span>}
                                                   {p.current_price != null && <span>€{p.current_price}</span>}
                                                   {p.unit && <span> / {p.unit}</span>}

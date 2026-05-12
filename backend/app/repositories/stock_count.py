@@ -52,7 +52,10 @@ class StockCountRepository:
             INSERT INTO stock_count_lines (session_id, product_id, system_qty, unit_id)
             SELECT %s, ib.product_id, ib.quantity, ib.unit_id
             FROM inventory_balances ib
+            JOIN products p ON p.id = ib.product_id
+            LEFT JOIN product_categories pc ON pc.id = p.category_id
             WHERE ib.location_id = %s
+              AND COALESCE(pc.is_service, FALSE) = FALSE
             ON CONFLICT (session_id, product_id) DO NOTHING
         """, (session_id, location_id))
 
@@ -68,11 +71,15 @@ class StockCountRepository:
             SELECT
                 l.id, l.product_id, p.name AS product_name,
                 uom.abbreviation AS unit,
-                l.system_qty, l.counted_qty, l.notes
+                l.system_qty, l.counted_qty, l.notes,
+                p.category_id,
+                pc.name AS category_name
             FROM stock_count_lines l
             JOIN products p ON p.id = l.product_id
             LEFT JOIN units_of_measure uom ON uom.id = l.unit_id
+            LEFT JOIN product_categories pc ON pc.id = p.category_id
             WHERE l.session_id = %s
+              AND COALESCE(pc.is_service, FALSE) = FALSE
             ORDER BY p.name
         """, (session_id,)).fetchall()
 
@@ -86,6 +93,7 @@ class StockCountRepository:
             result_lines.append(row)
 
         session["lines"] = result_lines
+        session["categories"] = self.get_count_categories(session_id)
         return session
 
     def update_lines(self, session_id: int, lines: list[dict]) -> None:
@@ -110,7 +118,10 @@ class StockCountRepository:
             INSERT INTO stock_count_lines (session_id, product_id, system_qty, unit_id)
             SELECT %s, ib.product_id, ib.quantity, ib.unit_id
             FROM inventory_balances ib
+            JOIN products p ON p.id = ib.product_id
+            LEFT JOIN product_categories pc ON pc.id = p.category_id
             WHERE ib.location_id = %s
+              AND COALESCE(pc.is_service, FALSE) = FALSE
             ON CONFLICT (session_id, product_id) DO UPDATE SET
                 system_qty = EXCLUDED.system_qty,
                 unit_id    = EXCLUDED.unit_id
@@ -122,6 +133,8 @@ class StockCountRepository:
         )
         self.db.commit()
         return self.get_session(session_id)
+
+    def submit_for_approval(self, session_id: int) -> dict | None:
         session = self._get_session_row(session_id)
         if not session or session["status"] != "draft":
             return None
@@ -206,11 +219,53 @@ class StockCountRepository:
         writer.writerows([dict(r) for r in rows])
         return buf.getvalue()
 
+    def delete_line(self, session_id: int, product_id: int) -> str | None:
+        """Remove a line from a draft session. Returns an error string or None on success."""
+        session = self._get_session_row(session_id)
+        if not session or session["status"] != "draft":
+            return "Session not found or not in draft status"
+        line = self.db.execute(
+            "SELECT system_qty FROM stock_count_lines WHERE session_id = %s AND product_id = %s",
+            (session_id, product_id),
+        ).fetchone()
+        if not line:
+            return "Line not found"
+        if line["system_qty"] is not None and abs(line["system_qty"]) > 0.0001:
+            return "Can only remove lines with zero system quantity"
+        self.db.execute(
+            "DELETE FROM stock_count_lines WHERE session_id = %s AND product_id = %s",
+            (session_id, product_id),
+        )
+        self.db.commit()
+        return None
+
     def update_count_date(self, session_id: int, count_date) -> None:
         self.db.execute(
             "UPDATE stock_count_sessions SET count_date = %s WHERE id = %s",
             (count_date, session_id),
         )
+        self.db.commit()
+
+    def get_count_categories(self, session_id: int) -> list[dict]:
+        rows = self.db.execute("""
+            SELECT n.id, n.session_id, n.category_id, pc.name AS category_name, n.display_order
+            FROM stock_count_category_nodes n
+            JOIN product_categories pc ON pc.id = n.category_id
+            WHERE n.session_id = %s
+            ORDER BY n.display_order, pc.name
+        """, (session_id,)).fetchall()
+        return [dict(r) for r in rows]
+
+    def set_count_categories(self, session_id: int, category_ids: list[int]) -> None:
+        self.db.execute(
+            "DELETE FROM stock_count_category_nodes WHERE session_id = %s",
+            (session_id,),
+        )
+        for i, cat_id in enumerate(category_ids):
+            self.db.execute("""
+                INSERT INTO stock_count_category_nodes (session_id, category_id, display_order)
+                VALUES (%s, %s, %s)
+            """, (session_id, cat_id, i))
         self.db.commit()
 
     def _get_session_row(self, session_id: int) -> dict | None:

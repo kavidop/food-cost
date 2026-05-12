@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   getInventoryOverview, exportInventoryOverview,
   getStockLocations, getCategories, getSuppliers,
-  createLocation, updateLocation,
+  createLocation, updateLocation, getServiceLines,
 } from '@/api/client'
 import { useQuery }    from '@/hooks/useAsync'
 import { useMutation } from '@/hooks/useMutation'
@@ -88,6 +88,7 @@ function ActionBtn({ label, onClick }: { label: string; onClick: () => void }) {
 
 export default function Inventory() {
   const navigate = useNavigate()
+  const [search,         setSearch]         = useState('')
   const [locationId,     setLocationId]     = useState<number | ''>('')
   const [categoryId,     setCategoryId]     = useState<number | ''>('')
   const [supplierId,     setSupplierId]     = useState<number | ''>('')
@@ -105,8 +106,9 @@ export default function Inventory() {
   const [locError,      setLocError]          = useState<string | null>(null)
 
   const { data: locations, reload: reloadLocations } = useQuery(getStockLocations)
-  const { data: categories } = useQuery(getCategories)
-  const { data: suppliers  } = useQuery(getSuppliers)
+  const { data: categories    } = useQuery(getCategories)
+  const { data: suppliers     } = useQuery(getSuppliers)
+  const { data: serviceLines  } = useQuery(getServiceLines)
 
   const { data, loading, error } = useQuery(
     () => getInventoryOverview({
@@ -167,13 +169,20 @@ export default function Inventory() {
   if (loading && !data) return <Spinner />
   if (error)            return <p style={{ color: '#dc2626' }}>{error}</p>
 
-  const rows = data ?? []
+  const allRows = data ?? []
+  const rows = search.trim()
+    ? allRows.filter(r => r.product_name.toLowerCase().includes(search.toLowerCase()))
+    : allRows
 
   // ── Summary stats ──────────────────────────────────────────────────────────
   const outOfStock = rows.filter(r => r.stock_status === 'out_of_stock').length
   const lowStock   = rows.filter(r => r.stock_status === 'low_stock').length
   const negative   = rows.filter(r => r.stock_status === 'negative').length
   const totalValue = rows.reduce((s, r) => s + (r.stock_value ?? 0), 0)
+  const totalServicesSpend = (serviceLines ?? []).reduce((s, r) => {
+    const sign = r.invoice_type === 'credit_note' ? -1 : 1
+    return s + sign * r.line_gross_amount
+  }, 0)
 
   // ── Th helper ─────────────────────────────────────────────────────────────
   const th: React.CSSProperties = {
@@ -228,6 +237,14 @@ export default function Inventory() {
         padding: '.75rem 1rem', background: '#f9fafb', border: '1px solid #e5e7eb',
         borderRadius: 8, marginBottom: '1rem',
       }}>
+        <input
+          type="text"
+          placeholder="Search products…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ padding: '.35rem .6rem', border: '1px solid #d1d5db', borderRadius: 6, fontSize: '.85rem', width: 200 }}
+        />
+
         <select
           value={locationId}
           onChange={e => setLocationId(e.target.value === '' ? '' : Number(e.target.value))}
@@ -280,9 +297,9 @@ export default function Inventory() {
           Include inactive
         </label>
 
-        {loading && (
-          <span style={{ fontSize: '.8rem', color: '#9ca3af', marginLeft: 'auto' }}>Refreshing…</span>
-        )}
+        <span style={{ fontSize: '.8rem', color: '#9ca3af', marginLeft: 'auto' }}>
+          {loading ? 'Refreshing…' : (search.trim() ? `${rows.length} of ${allRows.length}` : `${rows.length} products`)}
+        </span>
       </div>
 
       {/* ── Summary tiles ──────────────────────────────────────────────── */}
@@ -292,6 +309,7 @@ export default function Inventory() {
         <Tile label="Low stock"    value={lowStock}   accent={lowStock   > 0 ? '#d97706' : undefined} />
         <Tile label="Negative"     value={negative}   accent={negative   > 0 ? '#7c3aed' : undefined} />
         <Tile label="Total value"  value={`€${eur(totalValue)}`} />
+        <Tile label="Services & Fees" value={`€${eur(totalServicesSpend)}`} accent="#6b21a8" />
       </div>
 
       {/* ── Table ──────────────────────────────────────────────────────── */}

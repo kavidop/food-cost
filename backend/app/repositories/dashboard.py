@@ -295,7 +295,9 @@ class DashboardRepository:
             FROM products p
             LEFT JOIN inventory_balances ib ON ib.product_id = p.id
             LEFT JOIN units_of_measure uom ON uom.id = p.unit_id
+            LEFT JOIN product_categories pc ON pc.id = p.category_id
             WHERE p.is_active = 1
+              AND COALESCE(pc.is_service, FALSE) = FALSE
             GROUP BY p.id, p.name, p.category_id, p.units_per_pack, p.min_stock_level, uom.abbreviation
             ORDER BY p.name
         """).fetchall()]

@@ -1,7 +1,7 @@
 import type {
   SupplierListItem, SupplierDetail,
   ProductSearchResponse, ProductPickerItem, ProductListItem, ProductInvoiceLine, ProductCatalogStats,
-  ProductReferenceData,
+  ProductReferenceData, SupplierVariantOut,
   CategoryOut, UnitOut,
   InvoiceListItem, InvoiceDetail, ImportResponse, DuplicateCheckResponse, InvoiceUpdate,
   RecipeListItem, RecipeDetail,
@@ -11,7 +11,7 @@ import type {
   ProductInventoryDetail, MovementHistoryResponse,
   GlobalMovementListResponse, AdjustmentResult, VoidMovementResponse,
   PendingReceiptOut,
-  CountSessionListResponse, CountSessionDetail, PostResult,
+  CountSessionListResponse, CountSessionDetail, PostResult, CountCategoryNodeOut, ServiceLineOut,
   WasteListResponse, WasteAnalytics,
   TransferListResponse, TransferDetail,
   PurchasesAnalyticsResponse, ProductCostHistoryItem, UnmatchedLineItem,
@@ -66,6 +66,18 @@ export const getProductStats = () => request<ProductCatalogStats>('/products/sta
 
 export const getProductReferenceData = () => request<ProductReferenceData>('/products/reference-data')
 
+export const getServiceLines = (params: {
+  category_id?: number; supplier_id?: number; date_from?: string; date_to?: string
+} = {}) => {
+  const qs = new URLSearchParams()
+  if (params.category_id) qs.set('category_id', String(params.category_id))
+  if (params.supplier_id) qs.set('supplier_id', String(params.supplier_id))
+  if (params.date_from)   qs.set('date_from', params.date_from)
+  if (params.date_to)     qs.set('date_to', params.date_to)
+  const q = qs.toString()
+  return request<ServiceLineOut[]>(`/services/lines${q ? `?${q}` : ''}`)
+}
+
 export const createProduct = (data: object) =>
   request<{ id: number }>('/products', { method: 'POST', body: JSON.stringify(data) })
 
@@ -91,6 +103,21 @@ export const updateProduct = (id: number, data: object) =>
 
 export const mergeProducts = (sourceId: number, targetId: number) =>
   request(`/products/${sourceId}/merge`, { method: 'POST', body: JSON.stringify({ target_product_id: targetId }) })
+
+export const deleteProduct = (id: number) =>
+  request(`/products/${id}`, { method: 'DELETE' })
+
+export const getProductSupplierVariants = (id: number) =>
+  request<SupplierVariantOut[]>(`/products/${id}/supplier-variants`)
+
+export const updateSupplierVariant = (
+  productId: number,
+  spId: number,
+  data: { supplier_sku?: string | null; supplier_product_name?: string | null; is_preferred_supplier?: number },
+) => request(`/products/${productId}/supplier-variants/${spId}`, {
+  method: 'PATCH',
+  body: JSON.stringify(data),
+})
 
 // ── Categories & Units ─────────────────────────────────────────────────────
 
@@ -385,6 +412,15 @@ export const refreshCountSession = (id: number) =>
 
 export const approveCountSession = (id: number) =>
   request<PostResult>(`/stock-count/sessions/${id}/approve`, { method: 'POST' })
+
+export const removeCountLine = (sessionId: number, productId: number) =>
+  request(`/stock-count/sessions/${sessionId}/lines/${productId}`, { method: 'DELETE' })
+
+export const setCountCategories = (sessionId: number, categoryIds: number[]) =>
+  request<CountCategoryNodeOut[]>(`/stock-count/sessions/${sessionId}/categories`, {
+    method: 'PUT',
+    body: JSON.stringify({ category_ids: categoryIds }),
+  })
 
 export const exportCountSession = async (id: number, filename: string) => {
   const res = await fetch(`/api/stock-count/sessions/${id}/export`)

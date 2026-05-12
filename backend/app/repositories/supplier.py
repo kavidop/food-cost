@@ -74,6 +74,7 @@ class SupplierRepository:
             SELECT p.id, p.name, uom.abbreviation AS unit,
                    pc.name AS category,
                    sp.id AS supplier_product_id, sp.supplier_sku,
+                   sp.supplier_product_name,
                    sp.current_price, sp.total_quantity_ordered
             FROM supplier_products sp
             JOIN products p ON p.id = sp.product_id

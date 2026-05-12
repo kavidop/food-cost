@@ -46,10 +46,22 @@ export interface SupplierProductSummary {
   name: string
   supplier_product_id: number
   supplier_sku: string | null
+  supplier_product_name: string | null
   current_price: number | null
   total_quantity_ordered: number | null
   category: string | null
   unit: string | null
+}
+
+export interface SupplierVariantOut {
+  supplier_product_id: number
+  supplier_id: number
+  supplier_name: string
+  supplier_sku: string | null
+  supplier_product_name: string | null
+  current_price: number | null
+  is_preferred_supplier: number
+  total_quantity_ordered: number | null
 }
 
 export interface ProductListItem {
@@ -128,6 +140,8 @@ export interface ProductPickerItem {
   units_per_pack: number
   unit: string | null
   current_price: number
+  supplier: string | null
+  supplier_sku: string | null
 }
 
 export interface ProductInvoiceLine {
@@ -147,6 +161,22 @@ export interface CategoryOut {
   id: number
   name: string
   parent_id: number | null
+  is_service: boolean
+}
+
+export interface ServiceLineOut {
+  invoice_line_id: number
+  invoice_date: string
+  invoice_number: string
+  invoice_type: string
+  supplier_name: string
+  service_name: string
+  category_id: number
+  category_name: string
+  quantity: number
+  unit_price: number
+  line_net_amount: number
+  line_gross_amount: number
 }
 
 export interface UnitOut {
@@ -450,6 +480,14 @@ export interface VoidMovementResponse {
   error: string | null
 }
 
+export interface CountCategoryNodeOut {
+  id: number
+  session_id: number
+  category_id: number
+  category_name: string
+  display_order: number
+}
+
 export interface CountLineOut {
   id: number
   product_id: number
@@ -459,6 +497,8 @@ export interface CountLineOut {
   counted_qty: number | null
   variance: number | null
   notes: string | null
+  category_id: number | null
+  category_name: string | null
 }
 
 export interface CountSessionOut {
@@ -477,6 +517,7 @@ export interface CountSessionOut {
 
 export interface CountSessionDetail extends CountSessionOut {
   lines: CountLineOut[]
+  categories: CountCategoryNodeOut[]
 }
 
 export interface CountSessionListResponse {

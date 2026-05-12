@@ -67,7 +67,7 @@ class InventoryRepository:
 
         if location_id:
             balance_join = (
-                "LEFT JOIN inventory_balances ib "
+                "JOIN inventory_balances ib "
                 "ON ib.product_id = p.id AND ib.location_id = %s"
             )
             params.append(location_id)
@@ -80,7 +80,7 @@ class InventoryRepository:
                 ) ib ON ib.product_id = p.id
             """
 
-        where: list[str] = ["1=1"]
+        where: list[str] = ["COALESCE(pc.is_service, FALSE) = FALSE"]
         if not include_inactive:
             where.append("p.is_active = 1")
         if category_id:

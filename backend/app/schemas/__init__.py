@@ -6,6 +6,7 @@ from .product import (
     ProductCreate, ProductUpdate, ProductMergeRequest, ProductListItem, ProductSearchResponse,
     ProductPickerItem, ProductInvoiceLine, CategoryOut, CategoryCreate, UnitOut,
     ProductCatalogStats, ProductReferenceData,
+    SupplierVariantOut, SupplierVariantUpdate, ServiceLineOut,
 )
 from .invoice import (
     ImportRequest, ImportResponse, ImportWarning,

@@ -128,7 +128,8 @@ Route receives params via `Query(None)` and forwards them to the repository meth
 - `supplier_products.current_price`: used for recipe cost calculation (not `total_quantity_ordered`)
 - `stock_count_sessions`: `count_date DATE`, `frozen_at` updated on creation and refresh. `refresh_lines()` re-syncs `system_qty` from `inventory_balances` for draft sessions — adds new products, updates quantities, preserves `counted_qty`.
 - `products`: `units_per_pack` + `pack_unit_id` define wholesale↔retail conversion.
-- `product_categories`: `name UNIQUE` — enforced at DB level and in `ProductRepository`.
+- `product_categories`: `name UNIQUE` — enforced at DB level and in `ProductRepository`. `is_service BOOLEAN DEFAULT FALSE` — when true, products in this category are excluded from inventory, stock count sessions, product stats, and category breakdown tiles; their invoice lines appear only in the Services & Guarantees page.
+- `stock_count_category_nodes`: per-session category grouping (`session_id`, `category_id`, `display_order`). Managed via `get_count_categories()` / `set_count_categories()` in `StockCountRepository`.
 
 ## Product search query
 
@@ -155,18 +156,30 @@ for row in rows:
     qty   = row["quantity"]
 ```
 
+## Service category exclusion pattern
+
+Any query that should exclude service items must use:
+```sql
+LEFT JOIN product_categories pc ON pc.id = p.category_id
+WHERE COALESCE(pc.is_service, FALSE) = FALSE
+```
+Applied in: `ProductRepository.search()` (main + count queries), `get_catalog_stats()`, `get_main_category_breakdown()` (`cat_root` CTE base case), `DashboardRepository._inventory_overview_rows()`, `StockCountRepository.create_session()`, `refresh_lines()`, `get_session()` (lines query).
+
 ## New/changed endpoints
 
 | Endpoint | Method | Purpose |
 |---|---|---|
 | `/products/reference-data` | GET | Batched data: `{categories, units, suppliers, stats, locations}` |
 | `/products/{id}/cost-history` | GET | Invoice lines for a product ordered by date ASC (for cost history tab) |
+| `/products/{id}` | DELETE | Delete a product with no invoice lines; checks invoice_lines + stock_movements first |
 | `/inventory/{id}` | GET | Now includes `pack_unit_id`, `pack_unit`. Balances/`total_on_hand` normalised to retail units. |
 | `/stock-count/sessions/{id}/refresh` | POST | Re-syncs `system_qty` from live inventory; draft-only |
+| `/stock-count/sessions/{id}/categories` | GET/PUT | Get or replace the category-grouping nodes for a session |
 | `/import/suggest-locations` | POST | `{descriptions: string[]}` → `{suggestions: (int\|null)[]}` — inventory-based location hints |
 | `/purchases/analytics` | GET | `?granularity=day\|week\|month&months=0..36` — spend by period × category (0 = all time) |
 | `/purchases/unmatched-lines` | GET | Invoice lines with no `supplier_product_id` (uncatalogued spend) |
 | `/invoices/{id}` | PATCH | Edit invoice fields: `invoice_date`, `invoice_number`, `invoice_type`, `delivery_date`, `notes` |
+| `/services/lines` | GET | Service invoice lines (`?category_id`, `supplier_id`, `date_from`, `date_to`). Returns `ServiceLineOut[]`. |
 
 ## Pending Supabase migrations (run once if not applied)
 
@@ -227,8 +240,24 @@ FROM (
     GROUP BY il.supplier_product_id
 ) sub
 WHERE sp.id = sub.supplier_product_id;
+
+-- Stock count category grouping
+CREATE TABLE IF NOT EXISTS food_cost.stock_count_category_nodes (
+    id             SERIAL PRIMARY KEY,
+    session_id     INTEGER NOT NULL REFERENCES food_cost.stock_count_sessions(id) ON DELETE CASCADE,
+    category_id    INTEGER NOT NULL REFERENCES food_cost.product_categories(id),
+    display_order  INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(session_id, category_id)
+);
+
+-- Service categories flag
+ALTER TABLE food_cost.product_categories ADD COLUMN IF NOT EXISTS is_service BOOLEAN NOT NULL DEFAULT FALSE;
 ```
 
 ## Session Closing Protocol
 
-When told to 'wrap up': update the project structure and architectural decisions sections above to reflect changes from the session. Do not scan the repo — work from conversation context. Keep this file under 300 lines.
+When told to 'wrap up':
+1. Update this file to reflect changes from the session (endpoints, schema, patterns). Keep under 300 lines.
+2. Update `README.md` in the repo root if any user-facing features, setup steps, or architecture changed.
+3. Stage all modified files: `git add <files>` (list files explicitly — never `git add -A`).
+4. Write a concise commit message summarising what changed and why, then commit.

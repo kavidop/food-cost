@@ -1,4 +1,4 @@
-import { getDashboard } from '@/api/client'
+import { getDashboard, getServiceLines } from '@/api/client'
 import { useQuery }     from '@/hooks/useAsync'
 import Spinner          from '@/components/Spinner'
 
@@ -36,10 +36,16 @@ function SectionTitle({ title, sub }: { title: string; sub?: string }) {
 
 export default function Dashboard() {
   const { data, loading, error } = useQuery(getDashboard)
+  const { data: serviceLines }   = useQuery(getServiceLines)
 
   if (loading) return <Spinner />
   if (error)   return <p style={{ color: 'red' }}>{error}</p>
   if (!data)   return null
+
+  const totalServicesSpend = (serviceLines ?? []).reduce((s, r) => {
+    const sign = r.invoice_type === 'credit_note' ? -1 : 1
+    return s + sign * r.line_gross_amount
+  }, 0)
 
   const {
     stats,
@@ -64,6 +70,7 @@ export default function Dashboard() {
         <StatCard label="Total Spend" value={eur(stats.total_spend)} hint={`${stats.invoices} invoices`} />
         <StatCard label="Stock Value" value={eur(stats.stock_value)} hint={`${stats.products} active products`} />
         <StatCard label="Waste 30 Days" value={eur(stats.waste_value_30d)} hint={`${stats.waste_events_30d} waste events`} accent={stats.waste_value_30d > 0 ? '#b91c1c' : undefined} />
+        <StatCard label="Services & Fees" value={eur(totalServicesSpend)} hint="non-inventory spend" accent="#6b21a8" />
         <StatCard label="Recipes" value={stats.recipes} hint={stats.avg_recipe_margin_pct != null ? `${stats.avg_recipe_margin_pct}% avg margin` : 'No recipe margins yet'} />
         <StatCard label="Low Stock" value={stats.low_stock_products} hint={`${stats.out_of_stock_products} out, ${stats.negative_stock_products} negative`} accent={stats.low_stock_products > 0 || stats.out_of_stock_products > 0 ? '#d97706' : undefined} />
         <StatCard label="Recipe Risk" value={stats.blocked_recipes} hint={`${stats.draft_transfers} draft transfers`} accent={stats.blocked_recipes > 0 ? '#7c3aed' : undefined} />

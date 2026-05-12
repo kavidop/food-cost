@@ -86,6 +86,8 @@ class ProductPickerItem(BaseModel):
     units_per_pack: float
     unit: str | None = None
     current_price: float
+    supplier: str | None = None
+    supplier_sku: str | None = None
 
 
 class ProductInvoiceLine(BaseModel):
@@ -109,11 +111,28 @@ class CategoryOut(BaseModel):
     id: int
     name: str
     parent_id: int | None = None
+    is_service: bool = False
 
 
 class CategoryCreate(BaseModel):
     name: str
     parent_id: int | None = None
+    is_service: bool = False
+
+
+class ServiceLineOut(BaseModel):
+    invoice_line_id: int
+    invoice_date: date
+    invoice_number: str
+    invoice_type: str
+    supplier_name: str
+    service_name: str
+    category_id: int
+    category_name: str
+    quantity: float
+    unit_price: float
+    line_net_amount: float
+    line_gross_amount: float
 
 
 class UnitOut(BaseModel):
@@ -129,3 +148,20 @@ class ProductReferenceData(BaseModel):
     stats: ProductCatalogStats
     locations: list
     breakdown: list[MainCategoryBreakdownItem] = []
+
+
+class SupplierVariantOut(BaseModel):
+    supplier_product_id: int
+    supplier_id: int
+    supplier_name: str
+    supplier_sku: str | None = None
+    supplier_product_name: str | None = None
+    current_price: float | None = None
+    is_preferred_supplier: int
+    total_quantity_ordered: float | None = None
+
+
+class SupplierVariantUpdate(BaseModel):
+    supplier_sku: str | None = None
+    supplier_product_name: str | None = None
+    is_preferred_supplier: int | None = None

@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router
 import {
   LayoutDashboard, Upload, ShoppingCart,
   Package, ArrowLeftRight, ClipboardList, Repeat2, Trash2,
-  Box, Tag, Truck, FileText,
+  Box, Tag, Truck, FileText, Wrench,
   ChefHat, Layers,
   ChevronDown,
 } from 'lucide-react'
@@ -24,6 +24,7 @@ import Suppliers            from './pages/Suppliers'
 import Invoices             from './pages/Invoices'
 import Recipes              from './pages/Recipes'
 import IntermediateProducts from './pages/IntermediateProducts'
+import Services             from './pages/Services'
 
 import './app-layout.css'
 
@@ -55,10 +56,11 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Catalog',
     sectionIcon: <Box size={15} />,
     links: [
-      { to: '/products',   label: 'Products',   icon: <Box size={16} /> },
-      { to: '/categories', label: 'Categories', icon: <Tag size={16} /> },
-      { to: '/suppliers',  label: 'Suppliers',  icon: <Truck size={16} /> },
-      { to: '/invoices',   label: 'Invoices',   icon: <FileText size={16} /> },
+      { to: '/products',   label: 'Products',             icon: <Box size={16} /> },
+      { to: '/categories', label: 'Categories',           icon: <Tag size={16} /> },
+      { to: '/services',   label: 'Services & Guarantees', icon: <Wrench size={16} /> },
+      { to: '/suppliers',  label: 'Suppliers',            icon: <Truck size={16} /> },
+      { to: '/invoices',   label: 'Invoices',             icon: <FileText size={16} /> },
     ],
   },
   {
@@ -98,11 +100,13 @@ function SidebarContent() {
       flexDirection: 'column',
       gap: 4,
     }}>
-      <div style={{ padding: '0 1.1rem 1.5rem' }}>
-        <div style={{ fontWeight: 800, fontSize: '1.2rem', color: '#fff', letterSpacing: '-.02em' }}>
-          Zubro
-        </div>
-        <div style={{ fontSize: '.72rem', color: '#6366f1', fontWeight: 500, marginTop: 1 }}>
+      <div style={{ padding: '1rem 1.1rem 1.25rem', borderBottom: '1px solid #1f2937', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <img
+          src="/logo.jpg"
+          alt="Zúbro"
+          style={{ width: 140, height: 140, objectFit: 'contain', display: 'block', filter: 'invert(1)', mixBlendMode: 'screen' }}
+        />
+        <div style={{ fontSize: '.72rem', color: '#6366f1', fontWeight: 500, marginTop: 2, textAlign: 'center' }}>
           Food Cost Manager
         </div>
       </div>
@@ -187,6 +191,7 @@ function Layout() {
           <Route path="/invoices"                element={<Invoices />} />
           <Route path="/recipes"                 element={<Recipes />} />
           <Route path="/intermediate-products"   element={<IntermediateProducts />} />
+          <Route path="/services"               element={<Services />} />
         </Routes>
       </main>
     </div>

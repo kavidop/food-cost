@@ -10,6 +10,7 @@ from ..schemas import (
     ProductPickerItem, ProductInvoiceLine,
     CategoryOut, CategoryCreate, UnitOut,
     ProductCatalogStats, ProductReferenceData,
+    SupplierVariantOut, SupplierVariantUpdate, ServiceLineOut,
 )
 
 router = APIRouter(tags=["products"])
@@ -90,6 +91,21 @@ def get_product(product_id: int, repo: ProdRepo):
     return product
 
 
+@router.get("/products/{product_id}/supplier-variants", response_model=list[SupplierVariantOut])
+def get_supplier_variants(product_id: int, repo: ProdRepo):
+    if not repo.get_product(product_id):
+        raise HTTPException(404, "Product not found")
+    return repo.get_product_supplier_variants(product_id)
+
+
+@router.patch("/products/{product_id}/supplier-variants/{sp_id}")
+def update_supplier_variant(product_id: int, sp_id: int, data: SupplierVariantUpdate, repo: ProdRepo):
+    if not repo.get_product(product_id):
+        raise HTTPException(404, "Product not found")
+    repo.update_supplier_variant(sp_id, data.supplier_sku, data.supplier_product_name, data.is_preferred_supplier)
+    return {"success": True}
+
+
 @router.get("/products/{product_id}/invoices", response_model=list[ProductInvoiceLine])
 def product_invoices(product_id: int, repo: ProdRepo):
     return repo.get_product_invoices(product_id)
@@ -98,6 +114,16 @@ def product_invoices(product_id: int, repo: ProdRepo):
 @router.get("/products/{product_id}/cost-history")
 def product_cost_history(product_id: int, repo: ProdRepo):
     return repo.get_product_cost_history(product_id)
+
+
+@router.delete("/products/{product_id}", status_code=204)
+def delete_product(product_id: int, repo: ProdRepo):
+    if not repo.get_product(product_id):
+        raise HTTPException(404, "Product not found")
+    try:
+        repo.delete_product(product_id)
+    except ValueError as e:
+        raise HTTPException(409, str(e))
 
 
 @router.post("/products/{product_id}/merge")
@@ -133,7 +159,7 @@ def create_category(data: CategoryCreate, repo: ProdRepo):
     if not data.name.strip():
         raise HTTPException(400, "Name is required")
     try:
-        return repo.create_category(data.name.strip(), data.parent_id)
+        return repo.create_category(data.name.strip(), data.parent_id, data.is_service)
     except ValueError as e:
         raise HTTPException(409, str(e))
 
@@ -145,10 +171,10 @@ def update_category(cat_id: int, data: CategoryCreate, repo: ProdRepo):
     if data.parent_id == cat_id:
         raise HTTPException(400, "A category cannot be its own parent")
     try:
-        repo.update_category(cat_id, data.name.strip(), data.parent_id)
+        repo.update_category(cat_id, data.name.strip(), data.parent_id, data.is_service)
     except ValueError as e:
         raise HTTPException(409, str(e))
-    return CategoryOut(id=cat_id, name=data.name.strip(), parent_id=data.parent_id)
+    return CategoryOut(id=cat_id, name=data.name.strip(), parent_id=data.parent_id, is_service=data.is_service)
 
 
 @router.delete("/categories/{cat_id}")
@@ -163,3 +189,14 @@ def delete_category(cat_id: int, repo: ProdRepo):
 @router.get("/units", response_model=list[UnitOut])
 def get_units(repo: ProdRepo):
     return repo.list_units()
+
+
+@router.get("/services/lines", response_model=list[ServiceLineOut])
+def get_service_lines(
+    repo: ProdRepo,
+    category_id: int | None = Query(None),
+    supplier_id: int | None = Query(None),
+    date_from: str | None = Query(None),
+    date_to: str | None = Query(None),
+):
+    return repo.get_service_lines(category_id, supplier_id, date_from, date_to)

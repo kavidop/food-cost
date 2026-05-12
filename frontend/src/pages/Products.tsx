@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { searchProducts, getProductInvoices, updateProduct, createProduct, getAllProducts, getProduct, mergeProducts, getProductReferenceData, receivePending, getProductDetail, getProductCostHistory } from '@/api/client'
+import { searchProducts, getProductInvoices, updateProduct, createProduct, getAllProducts, getProduct, mergeProducts, getProductReferenceData, receivePending, getProductDetail, getProductCostHistory, getProductSupplierVariants, updateSupplierVariant, deleteProduct } from '@/api/client'
 import { useQuery }    from '@/hooks/useAsync'
 import { useMutation } from '@/hooks/useMutation'
 import Spinner from '@/components/Spinner'
-import type { ProductListItem, ProductPickerItem, ProductInvoiceLine, StockLocation, ProductInventoryDetail, MainCategoryBreakdownItem, ProductCostHistoryItem } from '@/types/api'
+import type { ProductListItem, ProductPickerItem, ProductInvoiceLine, StockLocation, ProductInventoryDetail, MainCategoryBreakdownItem, ProductCostHistoryItem, SupplierVariantOut } from '@/types/api'
 
 const eur = (n: number) =>
   n.toLocaleString('el-GR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -74,7 +74,7 @@ function toEditState(p: ProductListItem): EditState {
     pack_unit_size_ml:   p.pack_unit_size_ml ?? null,
     supplier_id:         null,
     supplier_product_id: p.supplier_product_id ?? null,
-    supplier_sku:        p.supplier_sku ?? '',
+    supplier_sku:        (p.supplier_sku && p.supplier_sku !== 'Multi') ? p.supplier_sku : '',
     current_price:       p.current_price ?? null,
   }
 }
@@ -134,14 +134,25 @@ function ViewDetails({ product, categories, units }: {
           <Field label="Name"><ReadValue value={product.name} /></Field>
           <Field label="Category"><ReadValue value={catName} /></Field>
           <Field label="Description"><ReadValue value={product.description} /></Field>
-          <Field label="Supplier SKU">
-            <div style={{
-              padding: '.4rem .6rem', background: '#f9fafb', border: '1px solid #e5e7eb',
-              borderRadius: 6, fontSize: '.85rem', fontFamily: 'monospace',
-              color: product.supplier_sku ? '#111827' : '#9ca3af', minHeight: 34,
-            }}>
-              {product.supplier_sku ?? '—'}
-            </div>
+          <Field label={product.supplier_sku === 'Multi' ? 'Supplier SKUs' : 'Supplier SKU'}>
+            {product.supplier_sku === 'Multi' ? (
+              <div style={{
+                padding: '.4rem .6rem', background: '#eff6ff', border: '1px solid #bfdbfe',
+                borderRadius: 6, fontSize: '.82rem', color: '#1d4ed8', minHeight: 34,
+                display: 'flex', alignItems: 'center', gap: '.4rem',
+              }}>
+                <span style={{ fontWeight: 700 }}>Multi</span>
+                <span style={{ color: '#6b7280', fontWeight: 400 }}>— see Supplier Aliases below</span>
+              </div>
+            ) : (
+              <div style={{
+                padding: '.4rem .6rem', background: '#f9fafb', border: '1px solid #e5e7eb',
+                borderRadius: 6, fontSize: '.85rem', fontFamily: 'monospace',
+                color: product.supplier_sku ? '#111827' : '#9ca3af', minHeight: 34,
+              }}>
+                {product.supplier_sku ?? '—'}
+              </div>
+            )}
           </Field>
         </div>
       </section>
@@ -167,10 +178,10 @@ function ViewDetails({ product, categories, units }: {
       <section>
         <SectionTitle>Pricing</SectionTitle>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem' }}>
-          <Field label="Current Price">
+          <Field label="Latest Invoice Price">
             <ReadValue value={formatPrice(product)} />
           </Field>
-          <Field label="Total Qty Ordered">
+          <Field label="Total Qty Ordered (all suppliers)">
             <ReadValue value={formatTotalQty(product)} />
           </Field>
         </div>
@@ -303,6 +314,114 @@ function EditDetails({ editing, set, categories, units, suppliers, isNew }: {
   )
 }
 
+// ── Supplier Aliases section ─────────────────────────────────────────────────
+
+function SupplierAliasesSection({
+  variants, editingSpId, variantEdits, variantError, variantSaving,
+  onStartEdit, onCancelEdit, onChangeEdits, onSave, onSetPreferred,
+}: {
+  variants: SupplierVariantOut[]
+  editingSpId: number | null
+  variantEdits: { sku: string; name: string }
+  variantError: string | null
+  variantSaving: boolean
+  onStartEdit: (v: SupplierVariantOut) => void
+  onCancelEdit: () => void
+  onChangeEdits: (e: { sku: string; name: string }) => void
+  onSave: (spId: number) => void
+  onSetPreferred: (spId: number) => void
+}) {
+  if (variants.length === 0) return null
+  const th: React.CSSProperties = {
+    padding: '.35rem .6rem', background: '#f9fafb', border: '1px solid #e5e7eb',
+    textAlign: 'left', fontWeight: 600, fontSize: '.72rem', color: '#6b7280',
+    textTransform: 'uppercase', letterSpacing: '.03em',
+  }
+  const td: React.CSSProperties = {
+    padding: '.4rem .6rem', border: '1px solid #f3f4f6', fontSize: '.85rem',
+  }
+  return (
+    <section>
+      <SectionTitle>Supplier Aliases ({variants.length})</SectionTitle>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr>
+            {['Supplier', 'Alias Name', 'SKU', 'Price', 'Preferred', ''].map(h => (
+              <th key={h} style={th}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {variants.map(v => {
+            const isEditing = editingSpId === v.supplier_product_id
+            return (
+              <tr key={v.supplier_product_id}>
+                <td style={{ ...td, fontWeight: 500 }}>{v.supplier_name}</td>
+                <td style={td}>
+                  {isEditing
+                    ? <input value={variantEdits.name}
+                        onChange={e => onChangeEdits({ ...variantEdits, name: e.target.value })}
+                        placeholder="Supplier's name for this product"
+                        style={{ width: '100%', padding: '.3rem .45rem', border: '1px solid #d1d5db', borderRadius: 4, fontSize: '.85rem' }} />
+                    : <span style={{ color: v.supplier_product_name ? '#111827' : '#9ca3af' }}>
+                        {v.supplier_product_name ?? '—'}
+                      </span>}
+                </td>
+                <td style={td}>
+                  {isEditing
+                    ? <input value={variantEdits.sku}
+                        onChange={e => onChangeEdits({ ...variantEdits, sku: e.target.value })}
+                        placeholder="SKU"
+                        style={{ width: 120, padding: '.3rem .45rem', border: '1px solid #d1d5db', borderRadius: 4, fontSize: '.85rem', fontFamily: 'monospace' }} />
+                    : <span style={{ fontFamily: 'monospace', color: v.supplier_sku ? '#111827' : '#9ca3af' }}>
+                        {v.supplier_sku ?? '—'}
+                      </span>}
+                </td>
+                <td style={{ ...td, textAlign: 'right' }}>
+                  {v.current_price != null ? `€${v.current_price.toLocaleString('el-GR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                </td>
+                <td style={{ ...td, textAlign: 'center' }}>
+                  {v.is_preferred_supplier
+                    ? <span style={{ color: '#059669', fontWeight: 700, fontSize: '1rem' }} title="Preferred supplier">★</span>
+                    : <button
+                        onClick={() => onSetPreferred(v.supplier_product_id)}
+                        style={{ fontSize: '.75rem', padding: '2px 7px', cursor: 'pointer', background: '#f9fafb', border: '1px solid #d1d5db', borderRadius: 4 }}>
+                        Set
+                      </button>}
+                </td>
+                <td style={{ ...td, whiteSpace: 'nowrap' }}>
+                  {isEditing ? (
+                    <>
+                      <button
+                        onClick={() => onSave(v.supplier_product_id)}
+                        disabled={variantSaving}
+                        style={{ fontSize: '.78rem', padding: '3px 8px', marginRight: 4, background: '#111827', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
+                        {variantSaving ? '…' : 'Save'}
+                      </button>
+                      <button
+                        onClick={onCancelEdit}
+                        style={{ fontSize: '.78rem', padding: '3px 8px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 4, cursor: 'pointer' }}>
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => onStartEdit(v)}
+                      style={{ fontSize: '.78rem', padding: '3px 8px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 4, cursor: 'pointer' }}>
+                      Edit
+                    </button>
+                  )}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+      {variantError && <p style={{ color: '#dc2626', fontSize: '.8rem', marginTop: '.4rem' }}>{variantError}</p>}
+    </section>
+  )
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Products() {
@@ -324,11 +443,20 @@ export default function Products() {
   const [costLoading, setCostLoading] = useState(false)
   const [activeTab,   setActiveTab]   = useState<'details' | 'history' | 'inventory' | 'cost'>('details')
 
+  // Supplier aliases state
+  const [variants,      setVariants]      = useState<SupplierVariantOut[] | null>(null)
+  const [editingSpId,   setEditingSpId]   = useState<number | null>(null)
+  const [variantEdits,  setVariantEdits]  = useState<{ sku: string; name: string }>({ sku: '', name: '' })
+  const [variantSaving, setVariantSaving] = useState(false)
+  const [variantError,  setVariantError]  = useState<string | null>(null)
+
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
   // Merge modal state
   const [mergeOpen,    setMergeOpen]    = useState(false)
   const [mergeSearch,  setMergeSearch]  = useState('')
   const [mergeTarget,  setMergeTarget]  = useState<ProductPickerItem | null>(null)
-  const { data: allProducts } = useQuery(getAllProducts)
+  const { data: allProducts, reload: reloadAllProducts } = useQuery(getAllProducts)
 
   // "New product" slide-over state
   const [showCreate,  setShowCreate]  = useState(false)
@@ -432,9 +560,17 @@ export default function Products() {
     setHistory(null)
     setInventory(null)
     setCostHistory(null)
+    setVariants(null)
+    setEditingSpId(null)
     setActiveTab('details')
-    const hist = await getProductInvoices(p.id)
+    const [hist, vars, detail] = await Promise.all([
+      getProductInvoices(p.id),
+      getProductSupplierVariants(p.id),
+      getProduct(p.id),
+    ])
     setHistory(hist)
+    setVariants(vars)
+    if (detail) setSelected(detail)
   })
 
   const switchTab = async (t: 'details' | 'history' | 'inventory' | 'cost') => {
@@ -477,8 +613,9 @@ export default function Products() {
       supplier_product_id: editState.supplier_product_id,
       supplier_sku:      editState.supplier_sku || null,
     })
+    const [,, detail] = await Promise.all([reload(), reloadAllProducts(), getProduct(editState.id)])
     setEditState(null)
-    await reload()
+    if (detail) setSelected(detail)
   })
 
   const set = (patch: Partial<EditState>) =>
@@ -498,15 +635,70 @@ export default function Products() {
   const openMerge = () => { setMergeOpen(true); setMergeSearch(''); setMergeTarget(null) }
   const closeMerge = () => { setMergeOpen(false); setMergeTarget(null); mergeMutation.reset() }
 
+  const deleteMutation = useMutation(async () => {
+    if (!selected) return
+    await deleteProduct(selected.id)
+    setSelected(null)
+    setEditState(null)
+    setVariants(null)
+    setEditingSpId(null)
+    setConfirmDelete(false)
+    closeMerge()
+    await reload()
+    await reloadAllProducts()
+  })
+
   const closeModal = () => {
     setSelected(null)
     setEditState(null)
+    setVariants(null)
+    setEditingSpId(null)
+    setConfirmDelete(false)
     closeMerge()
     setSearchParams({})
   }
 
+  const startEditVariant = (v: SupplierVariantOut) => {
+    setEditingSpId(v.supplier_product_id)
+    setVariantEdits({ sku: v.supplier_sku ?? '', name: v.supplier_product_name ?? '' })
+    setVariantError(null)
+  }
+  const cancelEditVariant = () => { setEditingSpId(null); setVariantError(null) }
+  const saveVariant = async (spId: number) => {
+    if (!selected) return
+    setVariantSaving(true)
+    setVariantError(null)
+    try {
+      await updateSupplierVariant(selected.id, spId, {
+        supplier_sku: variantEdits.sku || null,
+        supplier_product_name: variantEdits.name || null,
+      })
+      setVariants(await getProductSupplierVariants(selected.id))
+      setEditingSpId(null)
+    } catch (e) {
+      setVariantError(e instanceof Error ? e.message : 'Failed to save')
+    } finally {
+      setVariantSaving(false)
+    }
+  }
+  const setPreferredVariant = async (spId: number) => {
+    if (!selected) return
+    try {
+      await updateSupplierVariant(selected.id, spId, { is_preferred_supplier: 1 })
+      const [vars, updated] = await Promise.all([
+        getProductSupplierVariants(selected.id),
+        getProduct(selected.id),
+      ])
+      setVariants(vars)
+      if (updated) setSelected(updated)
+    } catch { /* non-critical */ }
+  }
+
   const enterEdit = () => {
-    if (selected) setEditState(toEditState(selected))
+    if (selected) {
+      setEditState(toEditState(selected))
+      reloadRefData()
+    }
   }
 
   const cancelEdit = () => setEditState(null)
@@ -680,7 +872,11 @@ export default function Products() {
                 </button>
               </td>
               <td style={{ color: '#6b7280', fontSize: '.85rem' }}>{p.category ?? '—'}</td>
-              <td style={{ color: '#6b7280', fontSize: '.8rem', fontFamily: 'monospace' }}>{p.supplier_sku ?? '—'}</td>
+              <td style={{ fontSize: '.8rem' }}>
+                {p.supplier_sku === 'Multi'
+                  ? <span style={{ background: '#eff6ff', color: '#1d4ed8', padding: '1px 7px', borderRadius: 9999, fontSize: '.75rem', fontWeight: 700 }}>Multi</span>
+                  : <span style={{ fontFamily: 'monospace', color: '#6b7280' }}>{p.supplier_sku ?? '—'}</span>}
+              </td>
               <td style={{ fontSize: '.85rem' }}>{p.unit ?? '—'}</td>
               <td style={{ fontSize: '.85rem' }}>
                 {formatPack(p)}
@@ -919,16 +1115,17 @@ export default function Products() {
                         key={p.id}
                         onClick={() => setMergeTarget(p)}
                         style={{
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          width: '100%', padding: '.65rem 1.25rem', background: 'none',
+                          display: 'block', width: '100%', padding: '.65rem 1.25rem', background: 'none',
                           border: 'none', borderBottom: '1px solid #f3f4f6', cursor: 'pointer',
-                          textAlign: 'left', fontSize: '.88rem',
+                          textAlign: 'left',
                         }}
                       >
-                        <span style={{ fontWeight: 500 }}>{p.name}</span>
-                        <span style={{ color: '#6b7280', fontSize: '.8rem', whiteSpace: 'nowrap', marginLeft: '1rem' }}>
-                          {p.unit ?? ''}{p.current_price ? ` · €${p.current_price.toFixed(2)}` : ''}
-                        </span>
+                        <div style={{ fontWeight: 500, fontSize: '.88rem' }}>{p.name}</div>
+                        <div style={{ color: '#6b7280', fontSize: '.78rem', marginTop: 2 }}>
+                          {p.supplier && <span>{p.supplier}</span>}
+                          {p.supplier_sku && <span style={{ fontFamily: 'monospace', marginLeft: p.supplier ? 4 : 0 }}>{p.supplier ? '· ' : ''}{p.supplier_sku}</span>}
+                          {p.current_price ? <span style={{ marginLeft: (p.supplier || p.supplier_sku) ? 4 : 0 }}>{(p.supplier || p.supplier_sku) ? '· ' : ''}€{p.current_price.toFixed(2)}{p.unit ? `/${p.unit}` : ''}</span> : null}
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -1032,9 +1229,27 @@ export default function Products() {
             {/* Body */}
             <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto', flex: 1 }}>
               {activeTab === 'details' && (
-                isEditing
-                  ? <EditDetails editing={editState} set={set} categories={cats} units={unitList} suppliers={suppliers} />
-                  : <ViewDetails product={selected} categories={cats} units={unitList} />
+                <>
+                  {isEditing
+                    ? <EditDetails editing={editState} set={set} categories={cats} units={unitList} suppliers={suppliers} />
+                    : <ViewDetails product={selected} categories={cats} units={unitList} />}
+                  {variants !== null && variants.length > 0 && (
+                    <div style={{ marginTop: '1.75rem' }}>
+                      <SupplierAliasesSection
+                        variants={variants}
+                        editingSpId={editingSpId}
+                        variantEdits={variantEdits}
+                        variantError={variantError}
+                        variantSaving={variantSaving}
+                        onStartEdit={startEditVariant}
+                        onCancelEdit={cancelEditVariant}
+                        onChangeEdits={setVariantEdits}
+                        onSave={saveVariant}
+                        onSetPreferred={setPreferredVariant}
+                      />
+                    </div>
+                  )}
+                </>
               )}
 
               {activeTab === 'inventory' && (
@@ -1225,7 +1440,49 @@ export default function Products() {
                   </button>
                 </>
               ) : (
-                <button className="btn-secondary" onClick={closeModal}>Close</button>
+                <>
+                  {!selected?.supplier_product_id && !confirmDelete && (
+                    <button
+                      onClick={() => setConfirmDelete(true)}
+                      style={{
+                        marginRight: 'auto', padding: '.35rem .75rem', background: 'white',
+                        border: '1px solid #fca5a5', color: '#dc2626', borderRadius: 6,
+                        fontSize: '.82rem', cursor: 'pointer',
+                      }}
+                    >
+                      Delete Product
+                    </button>
+                  )}
+                  {confirmDelete && (
+                    <div style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                      <span style={{ fontSize: '.82rem', color: '#374151' }}>Remove this product permanently?</span>
+                      <button
+                        onClick={() => deleteMutation.mutate(undefined as void)}
+                        disabled={deleteMutation.loading}
+                        style={{
+                          padding: '.35rem .75rem', background: '#dc2626', color: 'white',
+                          border: 'none', borderRadius: 6, fontSize: '.82rem', fontWeight: 600,
+                          cursor: deleteMutation.loading ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {deleteMutation.loading ? 'Deleting…' : 'Yes, Delete'}
+                      </button>
+                      <button
+                        onClick={() => { setConfirmDelete(false); deleteMutation.reset() }}
+                        style={{
+                          padding: '.35rem .75rem', background: 'white', border: '1px solid #d1d5db',
+                          color: '#374151', borderRadius: 6, fontSize: '.82rem', cursor: 'pointer',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      {deleteMutation.error && (
+                        <span style={{ color: '#dc2626', fontSize: '.8rem' }}>{deleteMutation.error}</span>
+                      )}
+                    </div>
+                  )}
+                  <button className="btn-secondary" onClick={closeModal}>Close</button>
+                </>
               )}
             </div>
 

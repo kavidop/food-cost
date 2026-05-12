@@ -7,6 +7,7 @@ from ..repositories.stock_count import StockCountRepository, get_stock_count_rep
 from ..schemas.stock_count import (
     CountSessionCreate, BulkLineUpdate, UpdateCountDateRequest,
     CountSessionOut, CountSessionDetail, PostResult,
+    CountCategoryNodeOut, SetCountCategoriesRequest,
 )
 
 router = APIRouter(tags=["stock-count"])
@@ -79,6 +80,31 @@ def approve_session(session_id: int, repo: SCRepo):
     if not result:
         raise HTTPException(409, "Session not found or not in pending_approval status")
     return result
+
+
+@router.delete("/stock-count/sessions/{session_id}/lines/{product_id}", status_code=204)
+def delete_line(session_id: int, product_id: int, repo: SCRepo):
+    err = repo.delete_line(session_id, product_id)
+    if err:
+        raise HTTPException(409, err)
+
+
+@router.get("/stock-count/sessions/{session_id}/categories", response_model=list[CountCategoryNodeOut])
+def get_count_categories(session_id: int, repo: SCRepo):
+    if not repo._get_session_row(session_id):
+        raise HTTPException(404, "Session not found")
+    return repo.get_count_categories(session_id)
+
+
+@router.put("/stock-count/sessions/{session_id}/categories", response_model=list[CountCategoryNodeOut])
+def set_count_categories(session_id: int, body: SetCountCategoriesRequest, repo: SCRepo):
+    session = repo._get_session_row(session_id)
+    if not session:
+        raise HTTPException(404, "Session not found")
+    if session["status"] == "committed":
+        raise HTTPException(409, "Cannot edit a committed session")
+    repo.set_count_categories(session_id, body.category_ids)
+    return repo.get_count_categories(session_id)
 
 
 @router.get("/stock-count/sessions/{session_id}/export")

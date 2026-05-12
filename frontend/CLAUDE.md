@@ -42,6 +42,7 @@ React 18, TypeScript, Vite, React Router v6, lucide-react (icons). No component 
 | `/invoices` | Invoices | Catalog |
 | `/recipes` | Recipes | Production |
 | `/intermediate-products` | IntermediateProducts | Production |
+| `/services` | Services | Catalog |
 
 Adding a page: create `src/pages/Foo.tsx`, import it in `App.tsx`, add a `<Route>` and a nav entry to `NAV_SECTIONS`.
 
@@ -91,11 +92,15 @@ Key API groups and their functions:
 
 **Movements**: `listMovements`, `createAdjustment`, `receiveStock`, `voidMovement`, `receivePending`, `getPendingReceipts(productId?)`, `linkReceiptToInvoiceLine(movementId, invoiceLineId)`
 
-**Products**: `getProductStats`, `createProduct`, `searchProducts`, `updateProduct`, `mergeProducts`
+**Products**: `getProductStats`, `createProduct`, `searchProducts`, `updateProduct`, `mergeProducts`, `deleteProduct(id)`
 — `getProductReferenceData()` returns `{categories, units, suppliers, stats, locations}` in one call (replaces 5 separate fetches on the Products page).
 
-**Stock Count**: `listCountSessions`, `createCountSession`, `getCountSession`, `updateCountLines`, `submitCountSession`, `approveCountSession`, `updateCountDate(id, count_date)`, `refreshCountSession(id)`
+**Services**: `getServiceLines({ category_id?, supplier_id?, date_from?, date_to? })`
+— Returns `ServiceLineOut[]` from `/services/lines`. Service lines are invoice lines whose product category has `is_service=true`. Used on the Services page and for the "Services & Fees" summary tile on Dashboard and Inventory Overview.
+
+**Stock Count**: `listCountSessions`, `createCountSession`, `getCountSession`, `updateCountLines`, `submitCountSession`, `approveCountSession`, `updateCountDate(id, count_date)`, `refreshCountSession(id)`, `setCountCategories(sessionId, categoryIds)`
 — `refreshCountSession` re-syncs `system_qty` from current inventory balances (adds products transferred in, updates existing quantities). Only works in draft.
+— `setCountCategories` defines the category-grouping structure for a session. Products are grouped client-side by walking the category hierarchy.
 
 **Transfers**: `listTransfers`, `createTransfer`, `getTransfer`, `confirmTransfer`, `cancelTransfer`
 
@@ -122,6 +127,11 @@ Notable types:
 - `ProductCostHistoryItem` — invoice line for a product with `invoice_date`, `supplier_name`, `unit_price`, `line_gross_amount`, etc.
 - `PurchasesAnalyticsResponse` — `{ periods: PurchasePeriodRow[], summary: PurchaseCategoryBreakdown[] }`
 - `UnmatchedLineItem` — invoice line with no `supplier_product_id`
+- `ServiceLineOut` — invoice line for a service category: `invoice_line_id`, `invoice_date`, `invoice_number`, `invoice_type`, `supplier_name`, `service_name`, `category_id`, `category_name`, `quantity`, `unit_price`, `line_net_amount`, `line_gross_amount`
+- `CountCategoryNodeOut` — session category group: `id`, `session_id`, `category_id`, `category_name`, `display_order`
+- `CountSessionDetail` — extends `CountSessionOut` with `lines: CountLineOut[]` and `categories: CountCategoryNodeOut[]`
+- `CountLineOut` — now includes `category_id: number | null` and `category_name: string | null`
+- `CategoryOut` — now includes `is_service: boolean`
 
 ## Spend total convention
 
@@ -143,4 +153,8 @@ Backend returns raw positive amounts for credit notes; sign flip is applied cons
 
 ## Session Closing Protocol
 
-When told to 'wrap up': update the Pages table and any changed API functions/types above to reflect changes from the session. Do not scan the repo — work from conversation context. Keep this file under 300 lines.
+When told to 'wrap up':
+1. Update this file to reflect changes from the session (pages, API functions, types). Keep under 300 lines.
+2. Update `README.md` in the repo root if any user-facing features, setup steps, or architecture changed.
+3. Stage all modified files: `git add <files>` (list files explicitly — never `git add -A`).
+4. Write a concise commit message summarising what changed and why, then commit.

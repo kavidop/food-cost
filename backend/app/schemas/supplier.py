@@ -52,6 +52,7 @@ class SupplierProductSummary(BaseModel):
     name: str
     supplier_product_id: int
     supplier_sku: str | None = None
+    supplier_product_name: str | None = None
     current_price: float | None = None
     total_quantity_ordered: float | None = None
     category: str | None = None

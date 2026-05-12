@@ -2,6 +2,18 @@ from datetime import datetime, date
 from pydantic import BaseModel
 
 
+class CountCategoryNodeOut(BaseModel):
+    id: int
+    session_id: int
+    category_id: int
+    category_name: str
+    display_order: int
+
+
+class SetCountCategoriesRequest(BaseModel):
+    category_ids: list[int]
+
+
 class CountSessionCreate(BaseModel):
     location_id: int
     notes: str | None = None
@@ -30,6 +42,8 @@ class CountLineOut(BaseModel):
     counted_qty: float | None
     variance: float | None
     notes: str | None
+    category_id: int | None = None
+    category_name: str | None = None
 
 
 class CountSessionOut(BaseModel):
@@ -48,6 +62,7 @@ class CountSessionOut(BaseModel):
 
 class CountSessionDetail(CountSessionOut):
     lines: list[CountLineOut]
+    categories: list[CountCategoryNodeOut] = []
 
 
 class PostResult(BaseModel):
