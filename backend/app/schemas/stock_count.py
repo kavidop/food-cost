@@ -23,6 +23,10 @@ class UpdateCountDateRequest(BaseModel):
     count_date: date
 
 
+class UpdateSessionNotesRequest(BaseModel):
+    notes: str | None = None
+
+
 class CountLineUpdate(BaseModel):
     product_id: int
     counted_qty: float | None

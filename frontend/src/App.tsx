@@ -25,6 +25,7 @@ import Invoices             from './pages/Invoices'
 import Recipes              from './pages/Recipes'
 import IntermediateProducts from './pages/IntermediateProducts'
 import Services             from './pages/Services'
+import MobileCount          from './pages/MobileCount'
 
 import './app-layout.css'
 
@@ -201,7 +202,10 @@ function Layout() {
 export default function App() {
   return (
     <BrowserRouter>
-      <Layout />
+      <Routes>
+        <Route path="/count/:sessionId" element={<MobileCount />} />
+        <Route path="*" element={<Layout />} />
+      </Routes>
     </BrowserRouter>
   )
 }

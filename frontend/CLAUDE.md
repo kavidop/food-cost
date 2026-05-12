@@ -34,6 +34,7 @@ React 18, TypeScript, Vite, React Router v6, lucide-react (icons). No component 
 | `/movements` | Movements | Inventory Ops |
 | `/stock-count` | StockCount | Inventory Ops |
 | `/stock-count/:sessionId` | StockCountDetail | — |
+| `/count/:sessionId` | MobileCount | — (no sidebar; bypasses Layout) |
 | `/transfers` | Transfers | Inventory Ops |
 | `/waste` | Waste | Inventory Ops |
 | `/products` | Products | Catalog |
@@ -45,6 +46,8 @@ React 18, TypeScript, Vite, React Router v6, lucide-react (icons). No component 
 | `/services` | Services | Catalog |
 
 Adding a page: create `src/pages/Foo.tsx`, import it in `App.tsx`, add a `<Route>` and a nav entry to `NAV_SECTIONS`.
+
+`/count/:sessionId` is a special full-screen mobile route matched in the outer `<Routes>` in `App.tsx` **before** the catch-all Layout route — it renders `MobileCount` with no sidebar or navigation.
 
 ## Sidebar (`App.tsx`)
 
@@ -98,7 +101,7 @@ Key API groups and their functions:
 **Services**: `getServiceLines({ category_id?, supplier_id?, date_from?, date_to? })`
 — Returns `ServiceLineOut[]` from `/services/lines`. Service lines are invoice lines whose product category has `is_service=true`. Used on the Services page and for the "Services & Fees" summary tile on Dashboard and Inventory Overview.
 
-**Stock Count**: `listCountSessions`, `createCountSession`, `getCountSession`, `updateCountLines`, `submitCountSession`, `approveCountSession`, `updateCountDate(id, count_date)`, `refreshCountSession(id)`, `setCountCategories(sessionId, categoryIds)`
+**Stock Count**: `listCountSessions`, `createCountSession`, `getCountSession`, `updateCountLines`, `submitCountSession`, `approveCountSession`, `updateCountDate(id, count_date)`, `refreshCountSession(id)`, `setCountCategories(sessionId, categoryIds)`, `updateCountNotes(id, notes)`
 — `refreshCountSession` re-syncs `system_qty` from current inventory balances (adds products transferred in, updates existing quantities). Only works in draft.
 — `setCountCategories` defines the category-grouping structure for a session. Products are grouped client-side by walking the category hierarchy.
 

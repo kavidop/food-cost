@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 
 from ..repositories.stock_count import StockCountRepository, get_stock_count_repo
 from ..schemas.stock_count import (
-    CountSessionCreate, BulkLineUpdate, UpdateCountDateRequest,
+    CountSessionCreate, BulkLineUpdate, UpdateCountDateRequest, UpdateSessionNotesRequest,
     CountSessionOut, CountSessionDetail, PostResult,
     CountCategoryNodeOut, SetCountCategoriesRequest,
 )
@@ -36,6 +36,13 @@ def get_session(session_id: int, repo: SCRepo):
     if not session:
         raise HTTPException(404, "Session not found")
     return session
+
+
+@router.patch("/stock-count/sessions/{session_id}/notes", status_code=204)
+def update_session_notes(session_id: int, body: UpdateSessionNotesRequest, repo: SCRepo):
+    if not repo._get_session_row(session_id):
+        raise HTTPException(404, "Session not found")
+    repo.update_notes(session_id, body.notes)
 
 
 @router.patch("/stock-count/sessions/{session_id}/date", status_code=204)

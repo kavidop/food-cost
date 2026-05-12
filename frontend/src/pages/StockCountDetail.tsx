@@ -437,6 +437,7 @@ export default function StockCountDetail() {
   const [filter, setFilter]             = useState<'all' | 'uncounted' | 'variance'>('all')
   const [search, setSearch]             = useState('')
   const [countDate, setCountDate]       = useState<string>('')
+  const [copied, setCopied]             = useState(false)
   const [showCategoryMgr, setShowCategoryMgr] = useState(false)
 
   useEffect(() => {
@@ -601,6 +602,25 @@ export default function StockCountDetail() {
         </div>
 
         <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/count/${session.id}`
+              navigator.clipboard.writeText(url).then(() => {
+                setCopied(true)
+                setTimeout(() => setCopied(false), 2000)
+              })
+            }}
+            style={{
+              padding: '.4rem .85rem',
+              background: copied ? '#059669' : 'white',
+              color: copied ? 'white' : '#374151',
+              border: `1px solid ${copied ? '#059669' : '#d1d5db'}`,
+              borderRadius: 6, cursor: 'pointer', fontSize: '.82rem', fontWeight: 500,
+              transition: 'all .15s',
+            }}
+          >
+            {copied ? 'Link copied!' : 'Mobile link'}
+          </button>
           <button
             onClick={() => doExport.mutate(undefined)}
             disabled={doExport.loading}

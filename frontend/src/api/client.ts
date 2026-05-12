@@ -404,6 +404,9 @@ export const updateCountLines = (id: number, lines: Array<{ product_id: number; 
 export const updateCountDate = (id: number, count_date: string) =>
   request(`/stock-count/sessions/${id}/date`, { method: 'PATCH', body: JSON.stringify({ count_date }) })
 
+export const updateCountNotes = (id: number, notes: string | null) =>
+  request(`/stock-count/sessions/${id}/notes`, { method: 'PATCH', body: JSON.stringify({ notes }) })
+
 export const submitCountSession = (id: number) =>
   request<CountSessionDetail>(`/stock-count/sessions/${id}/submit`, { method: 'POST' })
 

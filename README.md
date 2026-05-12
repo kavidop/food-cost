@@ -7,7 +7,7 @@ A food and beverage cost management system for restaurants and food service oper
 - **Dashboard** — KPIs, spending trends, and pending tasks at a glance; includes Services & Fees spend tile
 - **Invoice Import** — Extract line items from supplier PDF invoices using Claude or Gemini AI
 - **Inventory** — Real-time stock overview by location with movement ledger and product search
-- **Stock Counts** — Physical inventory sessions with system reconciliation; supports category-based grouping with collapsible sections
+- **Stock Counts** — Physical inventory sessions with system reconciliation; supports category-based grouping with collapsible sections; each session generates a shareable mobile URL (`/count/:id`) for tablet/phone counting without the main UI
 - **Transfers** — Move stock between locations with confirmation workflow
 - **Waste Tracking** — Log and analyse waste by location and reason
 - **Recipes** — Bill-of-materials costing with production batch recording

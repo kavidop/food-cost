@@ -246,6 +246,13 @@ class StockCountRepository:
         )
         self.db.commit()
 
+    def update_notes(self, session_id: int, notes: str | None) -> None:
+        self.db.execute(
+            "UPDATE stock_count_sessions SET notes = %s WHERE id = %s",
+            (notes, session_id),
+        )
+        self.db.commit()
+
     def get_count_categories(self, session_id: int) -> list[dict]:
         rows = self.db.execute("""
             SELECT n.id, n.session_id, n.category_id, pc.name AS category_name, n.display_order

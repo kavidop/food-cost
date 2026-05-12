@@ -174,6 +174,7 @@ Applied in: `ProductRepository.search()` (main + count queries), `get_catalog_st
 | `/products/{id}` | DELETE | Delete a product with no invoice lines; checks invoice_lines + stock_movements first |
 | `/inventory/{id}` | GET | Now includes `pack_unit_id`, `pack_unit`. Balances/`total_on_hand` normalised to retail units. |
 | `/stock-count/sessions/{id}/refresh` | POST | Re-syncs `system_qty` from live inventory; draft-only |
+| `/stock-count/sessions/{id}/notes` | PATCH | Update session notes (`{ notes: str \| null }`) |
 | `/stock-count/sessions/{id}/categories` | GET/PUT | Get or replace the category-grouping nodes for a session |
 | `/import/suggest-locations` | POST | `{descriptions: string[]}` → `{suggestions: (int\|null)[]}` — inventory-based location hints |
 | `/purchases/analytics` | GET | `?granularity=day\|week\|month&months=0..36` — spend by period × category (0 = all time) |
