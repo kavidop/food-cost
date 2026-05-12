@@ -20,7 +20,7 @@ npx tsc --noEmit # type-check without building (use this — npm run lint is bro
 
 ## Stack
 
-React 18, TypeScript, Vite, React Router v6. No component library — all styling is inline `style={}`. `@` resolves to `src/`.
+React 18, TypeScript, Vite, React Router v6, lucide-react (icons). No component library — all styling is inline `style={}`. `@` resolves to `src/`.
 
 ## Pages (one file per route)
 
@@ -44,6 +44,10 @@ React 18, TypeScript, Vite, React Router v6. No component library — all stylin
 | `/intermediate-products` | IntermediateProducts | Production |
 
 Adding a page: create `src/pages/Foo.tsx`, import it in `App.tsx`, add a `<Route>` and a nav entry to `NAV_SECTIONS`.
+
+## Sidebar (`App.tsx`)
+
+`NAV_SECTIONS` is the single source of truth for the nav. Each entry has `label`, `sectionIcon` (Lucide element), and `links` (array of `{ to, label, icon }`). The sidebar is collapsible per section — clicking the section header toggles it. On first render, the section containing the current route is auto-expanded. Import icons from `lucide-react`.
 
 ## Data fetching hooks
 

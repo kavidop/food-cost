@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest -q)",
+      "Bash(npx tsc *)",
+      "Bash(python -c \"from app.main import create_app; create_app\\(\\); print\\('OK'\\)\")",
+      "Bash(python -c \"from app.repositories.movements import MovementsRepository; print\\('movements repo OK'\\); from app.repositories.inventory import InventoryRepository; print\\('inventory repo OK'\\); from app.repositories.invoice import InvoiceRepository; print\\('invoice repo OK'\\)\")"
+    ]
+  }
+}

@@ -1,0 +1,2089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Zubro · Food Cost</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+body{font-family:'Inter',system-ui,sans-serif}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:8px;color:#cbd5e1;font-size:14px;cursor:pointer;transition:all .15s}
+.nav-item:hover{background:#1e293b;color:#fff}
+.nav-item.active{background:#4f46e5;color:#fff}
+.nav-item i{width:16px;text-align:center}
+.section{display:none}.section.active{display:block}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:24px}
+.stat-card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:20px;display:flex;align-items:center;gap:16px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:#4f46e5;color:#fff}.btn-primary:hover{background:#4338ca}.btn-primary:disabled{background:#a5b4fc;cursor:not-allowed}
+.btn-secondary{background:#f1f5f9;color:#374151;border:1px solid #e2e8f0}.btn-secondary:hover{background:#e2e8f0}
+.btn-danger{background:#fee2e2;color:#dc2626}.btn-danger:hover{background:#fecaca}
+.btn-sm{padding:5px 10px;font-size:12px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{background:#f8fafc;color:#6b7280;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:9px 12px;text-align:left;border-bottom:1px solid #e5e7eb;white-space:nowrap}
+.tbl td{padding:8px 12px;border-bottom:1px solid #f3f4f6;vertical-align:middle;white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+.tbl tbody tr:hover{background:#fafbff}
+.tbl td input,.tbl td select{border:1px solid #d1d5db;border-radius:5px;padding:3px 7px;font-size:12px;outline:none;width:100%}
+.tbl td input:focus,.tbl td select:focus{border-color:#4f46e5}
+.badge{display:inline-block;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600}
+.badge-green{background:#dcfce7;color:#16a34a}.badge-blue{background:#dbeafe;color:#1d4ed8}
+.badge-yellow{background:#fef9c3;color:#ca8a04}.badge-red{background:#fee2e2;color:#dc2626}
+.badge-gray{background:#f3f4f6;color:#6b7280}.badge-purple{background:#ede9fe;color:#7c3aed}
+.drop-zone{border:2px dashed #c7d2fe;border-radius:12px;padding:48px 24px;text-align:center;cursor:pointer;transition:all .2s;background:#fafbff}
+.drop-zone:hover,.drop-zone.drag-over{border-color:#4f46e5;background:#eef2ff}
+.provider-card{border:2px solid #e5e7eb;border-radius:10px;padding:12px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:12px;flex:1;user-select:none}
+.provider-card:hover{border-color:#a5b4fc;background:#fafbff}
+.provider-card.selected{border-color:#4f46e5;background:#eef2ff}
+.provider-card.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid #c7d2fe;border-top-color:#4f46e5;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;top:20px;right:20px;padding:12px 18px;border-radius:10px;color:#fff;font-size:13px;font-weight:500;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.15);animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.step{display:flex;align-items:center;gap:8px;font-size:13px;color:#9ca3af}
+.step.active{color:#4f46e5;font-weight:600}.step.done{color:#16a34a}
+.step-num{width:24px;height:24px;border-radius:50%;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.step-line{flex:1;height:1px;background:#e5e7eb;margin:0 8px}
+.pg-btn{width:30px;height:30px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .1s}
+.pg-btn:hover{background:#eef2ff;border-color:#4f46e5}.pg-btn:disabled{opacity:.4;cursor:not-allowed}
+.pg-btn.active{background:#4f46e5;color:#fff;border-color:#4f46e5}
+.field-label{display:block;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.field-input{width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;background:#fff}
+.field-input:focus{border-color:#4f46e5;box-shadow:0 0 0 2px #eef2ff}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;display:flex;align-items:center;justify-content:center}
+.inv-accordion{border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:12px}
+.inv-accordion-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#f8fafc;cursor:pointer;user-select:none}
+.inv-accordion-header:hover{background:#eef2ff}
+.inv-accordion-body{border-top:1px solid #e5e7eb;overflow-x:auto}
+.kv{display:flex;gap:24px;flex-wrap:wrap;font-size:13px}
+.kv-item label{display:block;color:#9ca3af;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+.kv-item span{color:#111827;font-weight:500}
+.db-layout{display:grid;grid-template-columns:220px 1fr;gap:16px}
+.table-list-item{padding:9px 16px;font-size:13px;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;transition:background .1s}
+.table-list-item:hover{background:#eef2ff}
+.table-list-item.selected{background:#4f46e5;color:#fff}
+.table-list-item .cnt{background:rgba(0,0,0,.1);border-radius:9999px;padding:1px 7px;font-size:11px;font-weight:600}
+.chip{padding:5px 12px;border-radius:9999px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #e5e7eb;background:#fff;color:#6b7280;transition:all .15s;white-space:nowrap}
+.chip:hover{border-color:#a5b4fc;color:#4f46e5;background:#eef2ff}
+.chip-active{background:#4f46e5;color:#fff;border-color:#4f46e5}
+.sup-card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);border-left:4px solid #e5e7eb;padding:16px;cursor:pointer;transition:box-shadow .15s}
+.sup-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.slideout{position:fixed;top:0;right:0;height:100%;width:min(780px,100vw);background:#fff;box-shadow:-4px 0 32px rgba(0,0,0,.15);z-index:45;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
+.slideout.open{transform:translateX(0)}
+.slideout-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:44;opacity:0;transition:opacity .25s;pointer-events:none}
+.slideout-backdrop.open{opacity:1;pointer-events:auto}
+</style>
+</head>
+
+<body class="bg-gray-50 h-screen flex overflow-hidden">
+
+<!-- ── Sidebar ── -->
+<aside class="w-52 bg-gray-900 flex-shrink-0 flex flex-col">
+  <div class="p-5 border-b border-gray-800">
+    <div class="text-white font-bold text-lg">Zubro</div>
+    <div class="text-gray-400 text-xs mt-0.5">Food Cost Manager</div>
+  </div>
+  <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+    <div class="nav-item active" onclick="showSection('dashboard')"><i class="fas fa-chart-pie"></i> Dashboard</div>
+    <div class="nav-item" onclick="showSection('import')"><i class="fas fa-file-arrow-up"></i> Import Invoice</div>
+    <div class="nav-item" onclick="showSection('products')"><i class="fas fa-boxes-stacked"></i> Products</div>
+    <div class="nav-item" onclick="showSection('categories')"><i class="fas fa-tags"></i> Categories</div>
+    <div class="nav-item" onclick="showSection('suppliers')"><i class="fas fa-truck"></i> Suppliers</div>
+    <div class="nav-item" onclick="showSection('invoices')"><i class="fas fa-file-invoice-dollar"></i> Invoices</div>
+    <div class="nav-item" onclick="showSection('recipes')"><i class="fas fa-utensils"></i> Recipes</div>
+    <div class="nav-item" onclick="showSection('browser')"><i class="fas fa-database"></i> DB Browser</div>
+  </nav>
+  <div class="p-4 border-t border-gray-800 text-gray-500 text-xs">zubro_food_cost.db</div>
+</aside>
+
+<!-- ── Main ── -->
+<main class="flex-1 overflow-y-auto">
+<div class="p-6 max-w-7xl mx-auto">
+
+<!-- ════ DASHBOARD ════ -->
+<div id="sec-dashboard" class="section active">
+  <div class="mb-6"><h1 class="text-xl font-bold text-gray-900">Dashboard</h1></div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="dash-stats">
+    <div class="text-center py-6"><div class="spinner mx-auto"></div></div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Recent invoices -->
+    <div class="card">
+      <h2 class="font-semibold text-gray-800 mb-3">Recent Invoices</h2>
+      <div id="dash-recent"></div>
+    </div>
+    <!-- By category -->
+    <div class="card">
+      <h2 class="font-semibold text-gray-800 mb-3">Products by Category</h2>
+      <div id="dash-categories"></div>
+    </div>
+  </div>
+
+  <!-- Suppliers -->
+  <div class="card">
+    <h2 class="font-semibold text-gray-800 mb-3">Suppliers</h2>
+    <div id="dash-suppliers"></div>
+  </div>
+</div>
+
+<!-- ════ IMPORT ════ -->
+<div id="sec-import" class="section">
+  <div class="mb-6">
+    <h1 class="text-xl font-bold text-gray-900">Import Invoice</h1>
+    <p class="text-sm text-gray-500 mt-1">Upload a PDF — AI will extract all invoices automatically.</p>
+  </div>
+
+  <!-- Step bar -->
+  <div class="flex mb-6">
+    <div class="step active" id="step1"><div class="step-num">1</div>Upload</div>
+    <div class="step-line"></div>
+    <div class="step" id="step2"><div class="step-num">2</div>Review</div>
+    <div class="step-line"></div>
+    <div class="step" id="step3"><div class="step-num">3</div>Done</div>
+  </div>
+
+  <!-- Step 1: upload -->
+  <div id="upload-panel">
+    <div class="card">
+      <!-- Provider selector -->
+      <div class="mb-5">
+        <label class="field-label">AI Provider</label>
+        <div class="flex gap-3 mb-3">
+          <div class="provider-card selected" id="pcard-anthropic" onclick="selectProvider('anthropic')">
+            <div class="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center text-orange-500"><i class="fas fa-robot"></i></div>
+            <div><div class="font-semibold text-sm">Anthropic</div><div class="text-xs text-gray-400">Claude models</div></div>
+            <i class="fas fa-check-circle text-indigo-500 ml-auto" id="pcheck-anthropic"></i>
+          </div>
+          <div class="provider-card" id="pcard-gemini" onclick="selectProvider('gemini')">
+            <div class="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-500"><i class="fas fa-gem"></i></div>
+            <div><div class="font-semibold text-sm">Google</div><div class="text-xs text-gray-400">Gemini models</div></div>
+            <i class="fas fa-check-circle text-indigo-500 ml-auto hidden" id="pcheck-gemini"></i>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <label class="field-label whitespace-nowrap">Model</label>
+          <select id="model-select" class="field-input" style="max-width:300px"></select>
+          <span id="provider-status" class="text-xs"></span>
+        </div>
+      </div>
+      <div class="border-t border-gray-100 mb-5"></div>
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()"
+           ondragover="handleDragOver(event)" ondragleave="handleDragLeave()" ondrop="handleDrop(event)">
+        <i class="fas fa-cloud-arrow-up text-indigo-400 text-4xl mb-3"></i>
+        <p class="text-gray-700 font-medium text-sm">Drop invoice PDF here</p>
+        <p class="text-gray-400 text-xs mt-1">or click to browse — text or scanned</p>
+        <input type="file" id="file-input" accept=".pdf" class="hidden" onchange="handleFileSelect(event)"/>
+      </div>
+      <div id="extract-progress" class="hidden mt-6 text-center">
+        <div class="spinner mx-auto mb-3"></div>
+        <p class="text-sm font-medium text-gray-700" id="progress-msg">Uploading…</p>
+        <p class="text-xs text-gray-400 mt-1" id="progress-sub"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: review (multiple invoices) -->
+  <div id="review-panel" class="hidden">
+    <div class="flex justify-between items-center mb-4">
+      <div>
+        <h2 class="font-semibold text-gray-800" id="review-title">Extracted Invoices</h2>
+        <div class="text-xs text-gray-400 mt-0.5" id="extraction-badge"></div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="resetImport()"><i class="fas fa-rotate-left"></i> Start over</button>
+    </div>
+
+    <div id="invoices-accordion"></div>
+
+    <div class="flex gap-3 mt-4">
+      <button class="btn btn-primary" id="import-btn" onclick="doImport()">
+        <i class="fas fa-database"></i> Import All to Database
+      </button>
+    </div>
+  </div>
+
+  <!-- Step 3: done -->
+  <div id="success-panel" class="hidden">
+    <div class="card text-center py-12">
+      <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fas fa-check text-green-600 text-2xl"></i>
+      </div>
+      <h2 class="text-lg font-bold text-gray-900 mb-1">Imported successfully</h2>
+      <p class="text-sm text-gray-500 mb-2" id="success-msg"></p>
+      <div id="import-warnings" class="hidden max-w-md mx-auto mb-4"></div>
+      <div class="flex gap-3 justify-center">
+        <button class="btn btn-primary" onclick="resetImport()"><i class="fas fa-plus"></i> Import another</button>
+        <button class="btn btn-secondary" onclick="showSection('invoices')"><i class="fas fa-list"></i> View invoices</button>
+      </div>
+    </div>
+  </div>
+</div><!-- /sec-import -->
+
+<!-- ════ PRODUCTS ════ -->
+<div id="sec-products" class="section">
+  <div class="mb-6"><h1 class="text-xl font-bold text-gray-900">Products</h1></div>
+  <div class="card mb-4">
+    <div class="flex gap-3 flex-wrap items-end">
+      <input type="text" id="prod-search" placeholder="Name, description or SKU…"
+             class="field-input flex-1" style="min-width:180px" onkeydown="if(event.key==='Enter')searchProducts()"/>
+      <select id="prod-category" class="field-input" style="min-width:160px" onchange="searchProducts()">
+        <option value="">All categories</option>
+      </select>
+      <select id="prod-supplier" class="field-input" style="min-width:140px" onchange="searchProducts()">
+        <option value="">All suppliers</option>
+      </select>
+      <button class="btn btn-primary" onclick="searchProducts()"><i class="fas fa-search"></i> Search</button>
+    </div>
+  </div>
+  <div class="card">
+    <div id="prod-results">
+      <div class="text-center py-10 text-gray-400 text-sm">
+        <i class="fas fa-search text-2xl mb-2 block"></i>Press Search to load products
+      </div>
+    </div>
+    <div id="prod-pagination" class="hidden flex justify-between items-center mt-4">
+      <span class="text-xs text-gray-500" id="prod-total-label"></span>
+      <div class="flex gap-1" id="prod-pg-btns"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ CATEGORIES ════ -->
+<div id="sec-categories" class="section">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-xl font-bold text-gray-900">Categories</h1>
+    <button class="btn btn-primary" onclick="openCatModal()"><i class="fas fa-plus"></i> New Category</button>
+  </div>
+  <div class="card">
+    <div id="cat-list-wrap"><div class="text-center py-10"><div class="spinner mx-auto"></div></div></div>
+  </div>
+</div>
+
+<!-- ════ SUPPLIERS ════ -->
+<div id="sec-suppliers" class="section">
+  <div class="flex justify-between items-center mb-5">
+    <h1 class="text-xl font-bold text-gray-900">Suppliers</h1>
+  </div>
+
+  <!-- Metrics -->
+  <div id="sup-metrics" class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5"></div>
+
+  <!-- Controls -->
+  <div class="flex gap-3 items-center mb-4 flex-wrap">
+    <div class="relative flex-1" style="min-width:180px">
+      <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+      <input id="sup-search" type="search" placeholder="Search suppliers…" class="field-input pl-8" oninput="renderSuppliers()"/>
+    </div>
+    <select id="sup-sort" class="field-input" style="width:auto" onchange="renderSuppliers()">
+      <option value="name">A → Z</option>
+      <option value="spend">Highest Spend</option>
+      <option value="invoices">Most Invoices</option>
+      <option value="products">Most Products</option>
+    </select>
+    <div class="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
+      <button id="btn-view-grid" class="px-3 py-2 bg-indigo-600 text-white" onclick="setSupView('grid')" title="Grid view"><i class="fas fa-grip-vertical"></i></button>
+      <button id="btn-view-table" class="px-3 py-2 text-gray-500 hover:bg-gray-50" onclick="setSupView('table')" title="Table view"><i class="fas fa-list"></i></button>
+    </div>
+  </div>
+
+  <!-- Category chips -->
+  <div id="sup-chips" class="flex gap-2 flex-wrap mb-5"></div>
+
+  <!-- Main content -->
+  <div id="sup-content"></div>
+</div>
+
+<!-- ════ SUPPLIER SLIDE-OVER ════ -->
+<div id="sup-backdrop" class="slideout-backdrop" onclick="closeSupDetail()"></div>
+<div id="sup-slideout" class="slideout">
+  <!-- Panel header -->
+  <div class="flex items-start justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+    <div class="min-w-0 flex-1 mr-4">
+      <h2 class="text-lg font-bold text-gray-900 truncate" id="sup-trade-name"></h2>
+      <div class="text-sm text-gray-400 truncate" id="sup-legal-name"></div>
+    </div>
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <span class="badge" id="sup-status"></span>
+      <button class="btn btn-secondary btn-sm" onclick="openSupEditModal()" title="Edit"><i class="fas fa-pen text-xs"></i></button>
+      <button class="btn btn-secondary btn-sm" onclick="openSupMergeModal()" title="Merge"><i class="fas fa-code-merge text-xs"></i></button>
+      <button class="btn btn-sm bg-red-50 text-red-600 hover:bg-red-100 border border-red-200" onclick="deleteSupplier()" title="Delete"><i class="fas fa-trash text-xs"></i></button>
+      <button onclick="closeSupDetail()" class="ml-1 text-gray-400 hover:text-gray-600 text-lg leading-none"><i class="fas fa-times"></i></button>
+    </div>
+  </div>
+  <!-- Panel body -->
+  <div class="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+    <div class="grid grid-cols-3 gap-3" id="sup-stats"></div>
+    <div class="grid grid-cols-2 gap-3 text-sm" id="sup-info-grid"></div>
+    <div class="card">
+      <h3 class="font-semibold text-gray-800 mb-3">Invoices</h3>
+      <div id="sup-invoices"></div>
+    </div>
+    <div class="card">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-semibold text-gray-800">Products</h3>
+        <span class="text-xs text-gray-400" id="sup-prod-count"></span>
+      </div>
+      <div id="sup-products"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ INVOICES ════ -->
+<div id="sec-invoices" class="section">
+  <div class="mb-6"><h1 class="text-xl font-bold text-gray-900">Invoices</h1></div>
+  <div class="card">
+    <div id="invoice-list-wrap"><div class="text-center py-10"><div class="spinner mx-auto"></div></div></div>
+  </div>
+  <div id="invoice-detail" class="card mt-4 hidden">
+    <div class="flex justify-between items-start mb-4">
+      <h2 class="font-semibold text-gray-800" id="inv-detail-title"></h2>
+      <button class="btn btn-secondary btn-sm" onclick="closeInvoiceDetail()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="kv mb-4" id="inv-detail-kv"></div>
+    <div class="overflow-x-auto">
+      <table class="tbl">
+        <thead><tr><th>SKU</th><th>Product</th><th>Qty</th><th>Unit</th><th>Price</th><th>Disc%</th><th>Net</th><th>VAT%</th><th>EFC/u</th><th>Gross</th></tr></thead>
+        <tbody id="inv-detail-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════ RECIPES ════ -->
+<div id="sec-recipes" class="section">
+  <div class="flex justify-between items-center mb-5">
+    <h1 class="text-xl font-bold text-gray-900">Recipes</h1>
+    <button class="btn btn-primary" onclick="openRecipeModal()">
+      <i class="fas fa-plus"></i> New Recipe
+    </button>
+  </div>
+
+  <!-- Summary metrics -->
+  <div id="recipe-metrics" class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5"></div>
+
+  <!-- Recipe list -->
+  <div id="recipe-list-wrap">
+    <div class="text-center py-16 text-gray-300"><div class="spinner mx-auto"></div></div>
+  </div>
+</div>
+
+<!-- ════ RECIPE SLIDE-OVER ════ -->
+<div id="recipe-backdrop" class="slideout-backdrop" onclick="closeRecipeDetail()"></div>
+<div id="recipe-slideout" class="slideout">
+  <div class="flex items-start justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+    <div class="min-w-0 flex-1 mr-4">
+      <h2 class="text-lg font-bold text-gray-900 truncate" id="rs-name"></h2>
+      <div class="text-sm text-gray-400" id="rs-category"></div>
+    </div>
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <button class="btn btn-secondary btn-sm" onclick="openRecipeModal(S._currentRecipe)" title="Edit"><i class="fas fa-pen text-xs"></i></button>
+      <button class="btn btn-sm bg-red-50 text-red-600 hover:bg-red-100 border border-red-200" onclick="deleteRecipe()" title="Delete"><i class="fas fa-trash text-xs"></i></button>
+      <button onclick="closeRecipeDetail()" class="ml-1 text-gray-400 hover:text-gray-600 text-lg"><i class="fas fa-times"></i></button>
+    </div>
+  </div>
+  <div class="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+    <!-- Key metrics row -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="rs-metrics"></div>
+
+    <!-- BOM table -->
+    <div class="card p-0 overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100 font-semibold text-gray-800 text-sm flex justify-between items-center">
+        <span>Bill of Materials</span>
+        <span class="text-xs text-gray-400" id="rs-servings-note"></span>
+      </div>
+      <div class="overflow-x-auto" id="rs-bom"></div>
+      <div class="px-4 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center text-sm font-semibold">
+        <span class="text-gray-600">Total Food Cost</span>
+        <span id="rs-total-cost" class="text-gray-900"></span>
+      </div>
+    </div>
+
+    <!-- Producibility -->
+    <div class="card">
+      <h3 class="font-semibold text-gray-800 mb-3 text-sm">Producibility</h3>
+      <div id="rs-producibility"></div>
+    </div>
+
+    <!-- Notes -->
+    <div id="rs-notes-wrap" class="hidden card bg-amber-50 border border-amber-100">
+      <div class="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Notes</div>
+      <div id="rs-notes" class="text-sm text-amber-900"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ RECIPE EDIT MODAL ════ -->
+<div id="recipe-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeRecipeModal()">
+  <div class="bg-white rounded-xl shadow-2xl w-full mx-4 flex flex-col" style="max-width:720px;max-height:90vh" onclick="event.stopPropagation()">
+    <!-- Modal header -->
+    <div class="flex justify-between items-center px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h2 class="font-bold text-gray-900" id="recipe-modal-title">New Recipe</h2>
+      <button onclick="closeRecipeModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <!-- Modal body -->
+    <div class="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+      <input type="hidden" id="rm-id"/>
+      <!-- Basic info -->
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2">
+          <label class="field-label">Recipe Name *</label>
+          <input id="rm-name" type="text" class="field-input" placeholder="e.g. Party Box, Catering Pack"/>
+        </div>
+        <div>
+          <label class="field-label">Category</label>
+          <input id="rm-category" type="text" class="field-input" placeholder="e.g. Meal Deal, Catering"/>
+        </div>
+        <div>
+          <label class="field-label">Selling Price (€)</label>
+          <input id="rm-price" type="number" min="0" step="0.01" class="field-input" placeholder="0.00"/>
+        </div>
+        <div>
+          <label class="field-label">Servings / Yield</label>
+          <input id="rm-servings" type="number" min="1" step="1" class="field-input" value="1" placeholder="1"/>
+        </div>
+        <div>
+          <label class="field-label">Notes</label>
+          <input id="rm-notes" type="text" class="field-input" placeholder="Optional notes"/>
+        </div>
+      </div>
+
+      <!-- Live cost preview -->
+      <div class="p-3 bg-indigo-50 rounded-lg border border-indigo-100 text-sm flex gap-6 flex-wrap" id="rm-cost-preview">
+        <div><span class="text-indigo-400 text-xs uppercase font-semibold">Food Cost</span><div class="font-bold text-indigo-700" id="rm-preview-cost">€0.00</div></div>
+        <div><span class="text-indigo-400 text-xs uppercase font-semibold">Margin</span><div class="font-bold text-indigo-700" id="rm-preview-margin">—</div></div>
+        <div><span class="text-indigo-400 text-xs uppercase font-semibold">Cost per Serving</span><div class="font-bold text-indigo-700" id="rm-preview-per-serving">—</div></div>
+      </div>
+
+      <!-- BOM editor -->
+      <div>
+        <div class="flex justify-between items-center mb-2">
+          <label class="field-label mb-0">Ingredients (Bill of Materials)</label>
+          <button class="btn btn-secondary btn-sm" onclick="addBomRow()"><i class="fas fa-plus text-xs"></i> Add</button>
+        </div>
+        <div class="border border-gray-200 rounded-lg overflow-hidden">
+          <table class="tbl" id="bom-editor-table">
+            <thead><tr><th>Product</th><th style="width:90px">Qty</th><th style="width:80px">Unit</th><th style="width:36px"></th></tr></thead>
+            <tbody id="bom-editor-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <!-- Modal footer -->
+    <div class="flex gap-3 px-6 py-4 border-t border-gray-100 flex-shrink-0">
+      <button class="btn btn-primary" onclick="saveRecipe()"><i class="fas fa-save"></i> Save Recipe</button>
+      <button class="btn btn-secondary" onclick="closeRecipeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ DB BROWSER ════ -->
+<div id="sec-browser" class="section">
+  <div class="mb-6"><h1 class="text-xl font-bold text-gray-900">DB Browser</h1></div>
+  <div class="db-layout">
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden h-fit" id="table-list">
+      <div class="text-center py-6"><div class="spinner mx-auto"></div></div>
+    </div>
+    <div class="card" style="min-height:300px">
+      <div class="text-center py-16 text-gray-400 text-sm" id="db-grid-empty">
+        <i class="fas fa-table text-2xl mb-2 block"></i>Select a table
+      </div>
+      <div id="db-grid-wrap" class="hidden">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="font-semibold text-gray-800" id="db-grid-title"></h2>
+          <span class="text-xs text-gray-400" id="db-grid-info"></span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="tbl"><thead id="db-grid-thead"></thead><tbody id="db-grid-tbody"></tbody></table>
+        </div>
+        <div class="flex justify-between items-center mt-4">
+          <span class="text-xs text-gray-500" id="db-total-label"></span>
+          <div class="flex gap-1" id="db-pg-btns"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /max-w -->
+</main>
+
+<!-- ════ EDIT PRODUCT MODAL ════ -->
+<div id="edit-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeEditModal()">
+  <div class="bg-white rounded-xl shadow-2xl w-full mx-4 flex flex-col" style="max-width:680px;max-height:90vh" onclick="event.stopPropagation()">
+    <div class="flex justify-between items-center px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <h2 class="font-bold text-gray-900">Edit Product</h2>
+      <button onclick="closeEditModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="overflow-y-auto flex-1 px-6 py-5">
+    <input type="hidden" id="edit-product-id"/>
+    <input type="hidden" id="edit-sp-id"/>
+    <div class="space-y-4">
+      <div>
+        <label class="field-label">Product Name</label>
+        <input id="edit-name" type="text" class="field-input"/>
+      </div>
+      <div>
+        <label class="field-label">Description</label>
+        <input id="edit-desc" type="text" class="field-input"/>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="field-label">Category</label>
+          <select id="edit-category" class="field-input">
+            <option value="">— none —</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Unit</label>
+          <select id="edit-unit" class="field-input">
+            <option value="">— none —</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="field-label">Volume (ml)</label>
+          <input id="edit-volume" type="number" class="field-input" placeholder="e.g. 700"/>
+        </div>
+        <div>
+          <label class="field-label">ABV %</label>
+          <input id="edit-abv" type="number" step="0.1" class="field-input" placeholder="e.g. 40"/>
+        </div>
+      </div>
+      <div>
+        <label class="field-label">Supplier SKU</label>
+        <input id="edit-sku" type="text" class="field-input"/>
+      </div>
+      <div class="border-t border-gray-100 pt-4">
+        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Pack Breakdown <span class="font-normal normal-case text-gray-300">— how this wholesale unit breaks down</span></div>
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="field-label">Units per Pack</label>
+            <input id="edit-units-per-pack" type="number" min="1" class="field-input" placeholder="e.g. 4"/>
+          </div>
+          <div>
+            <label class="field-label">Retail Unit</label>
+            <select id="edit-pack-unit" class="field-input">
+              <option value="">— select —</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Unit Size (ml)</label>
+            <input id="edit-pack-unit-size" type="number" min="0" step="0.1" class="field-input" placeholder="e.g. 5000"/>
+          </div>
+        </div>
+        <div class="mt-2 text-xs text-indigo-500 font-medium" id="edit-pack-preview"></div>
+        <script>
+          ['edit-units-per-pack','edit-pack-unit','edit-pack-unit-size'].forEach(id=>{
+            document.getElementById(id).addEventListener('input',()=>updatePackPreview({}));
+            document.getElementById(id).addEventListener('change',()=>updatePackPreview({}));
+          });
+        </script>
+      </div>
+    </div>
+      <!-- Invoice history -->
+      <div class="border-t border-gray-100 pt-4 mt-2">
+        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Invoice History</div>
+        <div id="edit-invoice-history">
+          <div class="text-center py-4"><div class="spinner mx-auto"></div></div>
+        </div>
+      </div>
+    </div><!-- end scrollable -->
+    <div class="flex gap-3 px-6 py-4 border-t border-gray-100 flex-shrink-0">
+      <button class="btn btn-primary" onclick="saveProduct()"><i class="fas fa-save"></i> Save changes</button>
+      <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ CATEGORY MODAL ════ -->
+<div id="cat-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeCatModal()">
+  <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4" onclick="event.stopPropagation()">
+    <div class="flex justify-between items-center mb-5">
+      <h2 class="font-bold text-gray-900" id="cat-modal-title">New Category</h2>
+      <button onclick="closeCatModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <input type="hidden" id="cat-modal-id"/>
+    <div class="space-y-4">
+      <div>
+        <label class="field-label">Name</label>
+        <input id="cat-modal-name" type="text" class="field-input" placeholder="e.g. Sparkling Wine"/>
+      </div>
+      <div>
+        <label class="field-label">Parent Category <span class="text-gray-400 font-normal">(optional)</span></label>
+        <select id="cat-modal-parent" class="field-input">
+          <option value="">— top level —</option>
+        </select>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-6">
+      <button class="btn btn-primary" onclick="saveCat()"><i class="fas fa-save"></i> Save</button>
+      <button class="btn btn-secondary" onclick="closeCatModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ SUPPLIER EDIT MODAL ════ -->
+<div id="sup-edit-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeSupEditModal()">
+  <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4" onclick="event.stopPropagation()">
+    <div class="flex justify-between items-center mb-5">
+      <h2 class="font-bold text-gray-900">Edit Supplier</h2>
+      <button onclick="closeSupEditModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <input type="hidden" id="sup-edit-id"/>
+    <div class="space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="field-label">Legal Name</label>
+          <input id="sup-edit-name" type="text" class="field-input" placeholder="Company legal name"/>
+        </div>
+        <div>
+          <label class="field-label">Trade Name</label>
+          <input id="sup-edit-trade" type="text" class="field-input" placeholder="Brand / trade name"/>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="field-label">VAT / AFM</label>
+          <input id="sup-edit-vat" type="text" class="field-input" placeholder="e.g. 800123456"/>
+        </div>
+        <div>
+          <label class="field-label">Phone</label>
+          <input id="sup-edit-phone" type="text" class="field-input" placeholder="Phone number"/>
+        </div>
+      </div>
+      <div>
+        <label class="field-label">Email</label>
+        <input id="sup-edit-email" type="email" class="field-input" placeholder="Email address"/>
+      </div>
+      <div>
+        <label class="field-label">Address</label>
+        <input id="sup-edit-address" type="text" class="field-input" placeholder="Street address"/>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-6">
+      <button class="btn btn-primary" onclick="saveSupplier()"><i class="fas fa-save"></i> Save</button>
+      <button class="btn btn-secondary" onclick="closeSupEditModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ SUPPLIER MERGE MODAL ════ -->
+<div id="sup-merge-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeSupMergeModal()">
+  <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4" onclick="event.stopPropagation()">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="font-bold text-gray-900">Merge Supplier</h2>
+      <button onclick="closeSupMergeModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <p class="text-sm text-gray-500 mb-4">All invoices and products of <strong id="sup-merge-from-name"></strong> will be reassigned to the selected supplier, then this supplier will be deleted.</p>
+    <div>
+      <label class="field-label">Merge into</label>
+      <select id="sup-merge-target" class="field-input"></select>
+    </div>
+    <div class="flex gap-3 mt-6">
+      <button class="btn btn-primary bg-amber-500 hover:bg-amber-600 border-amber-500" onclick="confirmMerge()">
+        <i class="fas fa-code-merge"></i> Merge & Delete
+      </button>
+      <button class="btn btn-secondary" onclick="closeSupMergeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════
+const S = {
+  provider:'anthropic', model:'', providers:{},
+  prodPage:1, prodSortBy:'name', prodSortDir:'asc',
+  supView:'grid', supCatFilter:'', _allSuppliers:[], _productById:{},
+  invoicesLoaded:false,
+  tablesLoaded:false,
+  dashLoaded:false,
+  categories:[], units:[],
+  extractedInvoices:[],
+};
+
+// ════════════════════════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════════════════════════
+function showSection(name){
+  document.querySelectorAll('.section').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('sec-'+name).classList.add('active');
+  const idx = ['dashboard','import','products','categories','suppliers','invoices','recipes','browser'].indexOf(name);
+  document.querySelectorAll('.nav-item')[idx].classList.add('active');
+  if(name==='invoices'  && !S.invoicesLoaded) loadInvoices();
+  if(name==='browser'   && !S.tablesLoaded)   loadTables();
+  if(name==='dashboard' && !S.dashLoaded)     loadDashboard();
+  if(name==='categories') loadCategories();
+  if(name==='suppliers')  loadSuppliers();
+  if(name==='recipes')    loadRecipes();
+}
+
+// ════════════════════════════════════════════════════════════════
+// UTILITIES
+// ════════════════════════════════════════════════════════════════
+function toast(msg,type='success'){
+  const t=document.createElement('div');
+  t.className='toast '+(type==='success'?'bg-green-600':'bg-red-600');
+  t.innerHTML=`<i class="fas fa-${type==='success'?'check':'triangle-exclamation'} mr-2"></i>${msg}`;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+const fmt=n=>n!=null?Number(n).toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
+const eur=n=>n!=null?'€'+Number(n).toLocaleString('el-GR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
+
+function setStep(n){
+  [1,2,3].forEach(i=>{
+    const el=document.getElementById('step'+i);
+    el.classList.remove('active','done');
+    if(i<n){el.classList.add('done');el.querySelector('.step-num').innerHTML='<i class="fas fa-check text-xs"></i>';}
+    else{el.querySelector('.step-num').textContent=i;}
+    if(i===n)el.classList.add('active');
+  });
+}
+
+function renderPagination(current,total,cb){
+  if(total<=1)return '';
+  let h='';
+  const btn=(lbl,p,active=false,dis=false)=>
+    `<button class="pg-btn${active?' active':''}" onclick="${cb.replace(/\$p/g,p)}" ${dis?'disabled':''}>${lbl}</button>`;
+  h+=btn('<i class="fas fa-chevron-left text-xs"></i>',current-1,false,current<=1);
+  const pages=[];
+  for(let p=1;p<=total;p++){
+    if(p===1||p===total||(p>=current-2&&p<=current+2))pages.push(p);
+    else if(pages[pages.length-1]!=='…')pages.push('…');
+  }
+  pages.forEach(p=>{
+    if(p==='…')h+=`<span class="px-1 text-gray-400 text-sm">…</span>`;
+    else h+=btn(p,p,p===current);
+  });
+  h+=btn('<i class="fas fa-chevron-right text-xs"></i>',current+1,false,current>=total);
+  return h;
+}
+
+// ════════════════════════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════════════════════════
+async function loadDashboard(){
+  S.dashLoaded=true;
+  const d=await fetch('/api/dashboard').then(r=>r.json());
+
+  // Stats
+  const icons=[
+    {k:'products', icon:'boxes-stacked', color:'bg-indigo-50 text-indigo-600', label:'Products'},
+    {k:'suppliers',icon:'truck',         color:'bg-blue-50 text-blue-600',     label:'Suppliers'},
+    {k:'invoices', icon:'file-invoice',  color:'bg-purple-50 text-purple-600', label:'Invoices'},
+    {k:'total_spend',icon:'euro-sign',   color:'bg-green-50 text-green-600',   label:'Total Spend'},
+  ];
+  document.getElementById('dash-stats').innerHTML=icons.map(({k,icon,color,label})=>`
+    <div class="stat-card">
+      <div class="w-12 h-12 rounded-xl ${color} flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-${icon} text-xl"></i>
+      </div>
+      <div>
+        <div class="text-2xl font-bold text-gray-900">${k==='total_spend'?eur(d.stats[k]):d.stats[k]}</div>
+        <div class="text-sm text-gray-500">${label}</div>
+      </div>
+    </div>`).join('');
+
+  // Recent invoices
+  document.getElementById('dash-recent').innerHTML=d.recent_invoices.length?`
+    <table class="tbl">
+      <thead><tr><th>Invoice</th><th>Date</th><th>Supplier</th><th style="text-align:right">Gross</th></tr></thead>
+      <tbody>${d.recent_invoices.map(i=>`<tr>
+        <td class="font-mono text-xs">${i.invoice_number}</td>
+        <td class="text-gray-500">${i.invoice_date}</td>
+        <td>${i.supplier_name}</td>
+        <td class="text-right font-medium">${eur(i.gross_amount)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`:'<p class="text-gray-400 text-sm">No invoices yet.</p>';
+
+  // By category
+  const maxCat=Math.max(...d.by_category.map(c=>c.cnt),1);
+  document.getElementById('dash-categories').innerHTML=d.by_category.length?
+    d.by_category.map(c=>`
+      <div class="flex items-center gap-3 mb-2">
+        <div class="text-xs text-gray-600 w-32 truncate">${c.name}</div>
+        <div class="flex-1 bg-gray-100 rounded-full h-2">
+          <div class="bg-indigo-500 h-2 rounded-full" style="width:${Math.round(c.cnt/maxCat*100)}%"></div>
+        </div>
+        <div class="text-xs text-gray-500 w-6 text-right">${c.cnt}</div>
+      </div>`).join('')
+    :'<p class="text-gray-400 text-sm">No categories assigned yet.</p>';
+
+  // Suppliers
+  document.getElementById('dash-suppliers').innerHTML=d.by_supplier.length?`
+    <table class="tbl">
+      <thead><tr><th>Supplier</th><th>Invoices</th><th style="text-align:right">Total Spend</th></tr></thead>
+      <tbody>${d.by_supplier.map(s=>`<tr>
+        <td class="font-medium">${s.name}</td>
+        <td class="text-gray-500">${s.invoices}</td>
+        <td class="text-right font-bold">${eur(s.total)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`:'<p class="text-gray-400 text-sm">No suppliers yet.</p>';
+}
+
+// ════════════════════════════════════════════════════════════════
+// PROVIDER SELECTOR
+// ════════════════════════════════════════════════════════════════
+async function loadProviders(){
+  S.providers=await fetch('/api/providers').then(r=>r.json());
+  const def=S.providers.anthropic?.available?'anthropic':S.providers.gemini?.available?'gemini':'anthropic';
+  selectProvider(def);
+}
+function selectProvider(name){
+  const prov=S.providers[name];
+  ['anthropic','gemini'].forEach(p=>{
+    const avail=S.providers[p]?.available;
+    document.getElementById('pcard-'+p).classList.toggle('disabled',!avail);
+    document.getElementById('pcard-'+p).classList.toggle('selected',p===name);
+    document.getElementById('pcheck-'+p).classList.toggle('hidden',p!==name);
+  });
+  S.provider=name;
+  const models=(name==='anthropic'?S.providers.anthropic?.models:S.providers.gemini?.models)||[];
+  const sel=document.getElementById('model-select');
+  sel.innerHTML=models.map(m=>`<option value="${m.id}">${m.label}</option>`).join('');
+  S.model=models[0]?.id||'';
+  const status=document.getElementById('provider-status');
+  status.innerHTML=prov?.available
+    ?'<span class="text-green-600"><i class="fas fa-circle-check mr-1"></i>Ready</span>'
+    :`<span class="text-red-500"><i class="fas fa-triangle-exclamation mr-1"></i>${name==='anthropic'?'ANTHROPIC_API_KEY':'GOOGLE_API_KEY'} not set</span>`;
+}
+
+// ════════════════════════════════════════════════════════════════
+// IMPORT — UPLOAD
+// ════════════════════════════════════════════════════════════════
+function handleDragOver(e){e.preventDefault();document.getElementById('drop-zone').classList.add('drag-over');}
+function handleDragLeave(){document.getElementById('drop-zone').classList.remove('drag-over');}
+function handleDrop(e){e.preventDefault();handleDragLeave();uploadFile(e.dataTransfer.files[0]);}
+function handleFileSelect(e){uploadFile(e.target.files[0]);}
+
+async function uploadFile(file){
+  if(!file||!file.name.toLowerCase().endsWith('.pdf')){toast('Please select a PDF file.','error');return;}
+  const model=document.getElementById('model-select').value;
+  if(!model){toast('Select a model first.','error');return;}
+  const prog=document.getElementById('extract-progress');
+  prog.classList.remove('hidden');
+  document.getElementById('progress-msg').textContent='Extracting with AI…';
+  document.getElementById('progress-sub').textContent=`${S.provider==='gemini'?'Gemini':'Claude'} (${model}) — may take 15–30s for multi-page PDFs`;
+  const fd=new FormData();
+  fd.append('file',file);fd.append('provider',S.provider);fd.append('model',model);
+  try{
+    const res=await fetch('/api/extract',{method:'POST',body:fd});
+    const json=await res.json();
+    if(!res.ok||json.error)throw new Error(json.error||'Extraction failed');
+    S.extractedInvoices=json.invoices||[];
+    prog.classList.add('hidden');
+    renderReview(json);
+  }catch(err){
+    prog.classList.add('hidden');
+    toast('Extraction error: '+err.message,'error');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// IMPORT — REVIEW (multi-invoice accordion)
+// ════════════════════════════════════════════════════════════════
+function renderReview(json){
+  setStep(2);
+  document.getElementById('upload-panel').classList.add('hidden');
+  document.getElementById('review-panel').classList.remove('hidden');
+
+  const n=json.invoices.length;
+  document.getElementById('review-title').textContent=`${n} Invoice${n>1?'s':''} found`;
+  const icon=json.provider==='gemini'?'gem text-blue-500':'robot text-orange-500';
+  document.getElementById('extraction-badge').innerHTML=
+    `<i class="fas fa-${icon} mr-1"></i>Extracted by <b>${json.provider==='gemini'?'Google Gemini':'Anthropic Claude'}</b> &mdash; <span class="font-mono">${json.model}</span>`;
+
+  document.getElementById('invoices-accordion').innerHTML=
+    json.invoices.map((inv,i)=>buildInvoiceAccordion(inv,i)).join('');
+
+  // Run duplicate checks for all extracted invoices
+  json.invoices.forEach((_,i)=>{
+    checkDuplicate(i);
+    // Re-check when invoice # or VAT is edited
+    ['inv-num-'+i,'inv-sup-vat-'+i].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.addEventListener('change',()=>checkDuplicate(i));
+    });
+  });
+}
+
+function buildInvoiceAccordion(inv,idx){
+  const linesHtml=`<div class="overflow-x-auto" style="max-height:300px;overflow-y:auto">
+    <table class="tbl">
+      <thead><tr><th>SKU</th><th>Description</th><th>Qty</th><th>Unit</th><th>Units/Pack</th><th>Price</th><th>Disc%</th><th>Net</th><th>VAT%</th><th>EFC/u</th><th>Gross</th><th></th></tr></thead>
+      <tbody id="tbody-${idx}">${(inv.line_items||[]).map((it,li)=>reviewLineRow(it,idx,li)).join('')}</tbody>
+    </table></div>`;
+
+  return `<div class="inv-accordion" id="acc-wrap-${idx}">
+    <div id="dup-warn-${idx}" class="hidden px-4 py-3 bg-red-50 border-b border-red-200 flex items-start gap-3">
+      <i class="fas fa-triangle-exclamation text-red-500 mt-0.5 flex-shrink-0"></i>
+      <div class="flex-1 text-sm">
+        <span class="font-semibold text-red-700">Duplicate invoice detected.</span>
+        <span class="text-red-600" id="dup-warn-msg-${idx}"></span>
+        <span class="text-red-500"> Importing again will overwrite existing data. Consider aborting.</span>
+      </div>
+    </div>
+    <div class="inv-accordion-header" onclick="toggleAccordion(${idx})">
+      <div class="flex items-center gap-3">
+        <i class="fas fa-chevron-down text-gray-400 text-xs transition-transform" id="chev-${idx}"></i>
+        <div>
+          <span class="font-semibold text-sm text-gray-900">Invoice ${inv.invoice_number||'—'}</span>
+          <span class="text-xs text-gray-400 ml-2">${inv.invoice_date||''}</span>
+          <span class="badge badge-gray ml-2">${(inv.line_items||[]).length} lines</span>
+        </div>
+      </div>
+      <div class="text-sm font-bold text-gray-800">${eur(inv.gross_amount)}</div>
+    </div>
+    <div class="inv-accordion-body" id="acc-body-${idx}">
+      <!-- Header fields -->
+      <div class="p-4 bg-white border-b border-gray-100">
+        <div class="mb-3 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+          <label class="field-label text-indigo-700">Link to existing supplier <span class="font-normal text-indigo-400">(overrides detected supplier fields)</span></label>
+          <select class="field-input mt-1" onchange="applySupplierOverride(this,${idx})">
+            <option value="">— use extracted data —</option>
+            ${(S.suppliers||[]).map(s=>`<option value="${s.id}" data-vat="${s.vat_number||''}" data-name="${(s.name||'').replace(/"/g,'&quot;')}" data-trade="${(s.trade_name||'').replace(/"/g,'&quot;')}">${s.trade_name||s.name} (VAT: ${s.vat_number||'—'})</option>`).join('')}
+          </select>
+        </div>
+        <div class="grid grid-cols-3 gap-4">
+        ${fieldInput('Invoice #','inv-num-'+idx,inv.invoice_number)}
+        ${fieldInput('Date','inv-date-'+idx,inv.invoice_date,'date')}
+        ${fieldInput('Supplier Name','inv-sup-name-'+idx,inv.supplier?.name)}
+        ${fieldInput('Trade Name','inv-sup-trade-'+idx,inv.supplier?.trade_name)}
+        ${fieldInput('VAT / AFM','inv-sup-vat-'+idx,inv.supplier?.vat_number)}
+        ${fieldInput('Phone','inv-sup-phone-'+idx,inv.supplier?.phone)}
+        ${fieldInput('Net €','inv-net-'+idx,inv.net_amount,'number')}
+        ${fieldInput('VAT €','inv-vat-'+idx,inv.vat_amount,'number')}
+        ${fieldInput('Excise Duty €','inv-efc-'+idx,inv.excise_duty_amount,'number')}
+        ${fieldInput('Gross €','inv-gross-'+idx,inv.gross_amount,'number')}
+        <div class="col-span-2">${fieldInput('Address','inv-sup-addr-'+idx,inv.supplier?.address)}</div>
+        </div>
+      </div>
+      ${linesHtml}
+      <div class="p-3 bg-gray-50 flex justify-end">
+        <button class="btn btn-secondary btn-sm" onclick="addLine(${idx})"><i class="fas fa-plus"></i> Add row</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function checkDuplicate(idx){
+  const vat = (document.getElementById('inv-sup-vat-'+idx)||{}).value||'';
+  const num = (document.getElementById('inv-num-'+idx)||{}).value||'';
+  const warn = document.getElementById('dup-warn-'+idx);
+  if(!warn) return;
+  if(!vat||!num){ warn.classList.add('hidden'); return; }
+  const res = await fetch('/api/invoices/check-duplicate?'+new URLSearchParams({vat,invoice_number:num})).then(r=>r.json());
+  if(res.duplicate){
+    const ex = res.existing;
+    document.getElementById('dup-warn-msg-'+idx).textContent =
+      ` Invoice #${num} from "${ex.supplier_name}" was already imported on ${ex.invoice_date} (DB id ${ex.id}).`;
+    warn.classList.remove('hidden');
+  } else {
+    warn.classList.add('hidden');
+  }
+}
+
+function applySupplierOverride(sel,idx){
+  const opt = sel.options[sel.selectedIndex];
+  if(!opt||!opt.value) return;
+  const vat   = opt.dataset.vat  ||'';
+  const name  = opt.dataset.name ||'';
+  const trade = opt.dataset.trade||'';
+  const nameEl  = document.getElementById('inv-sup-name-'+idx);
+  const tradeEl = document.getElementById('inv-sup-trade-'+idx);
+  const vatEl   = document.getElementById('inv-sup-vat-'+idx);
+  if(nameEl)  nameEl.value  = name;
+  if(tradeEl) tradeEl.value = trade;
+  if(vatEl)   vatEl.value   = vat;
+  checkDuplicate(idx);
+}
+
+function fieldInput(label,id,val,type='text'){
+  return `<div><label class="field-label">${label}</label>
+    <input type="${type}" id="${id}" value="${(val??'').toString().replace(/"/g,'&quot;')}"
+           class="field-input" style="padding:5px 8px;font-size:12px"/></div>`;
+}
+
+function reviewLineRow(it,idx,li){
+  const u=(k,t='text',w='70')=>`<td><input type="${t}" data-idx="${idx}" data-li="${li}" data-k="${k}"
+    value="${(it[k]??'').toString().replace(/"/g,'&quot;')}" style="min-width:${w}px"/></td>`;
+  const unitOpts=(S.units.length?S.units:[
+    {abbreviation:'btl'},{abbreviation:'can'},{abbreviation:'kg'},
+    {abbreviation:'L'},{abbreviation:'pcs'},{abbreviation:'kbt'},
+  ]).map(o=>`<option value="${o.abbreviation}" ${it.unit===o.abbreviation?'selected':''}>${o.abbreviation}</option>`).join('');
+  return `<tr>
+    ${u('supplier_sku','text','65')}${u('description','text','180')}
+    ${u('quantity','number','50')}
+    <td><select data-idx="${idx}" data-li="${li}" data-k="unit" style="border:1px solid #d1d5db;border-radius:5px;padding:3px 6px;font-size:12px">
+      ${unitOpts}
+    </select></td>
+    <td><input type="number" min="1" data-idx="${idx}" data-li="${li}" data-k="units_per_pack"
+      value="${it.units_per_pack??''}" placeholder="—" style="min-width:60px"/></td>
+    ${u('unit_price','number','75')}${u('discount_percent','number','50')}
+    ${u('line_net_amount','number','85')}${u('vat_rate','number','50')}
+    ${u('excise_duty_per_unit','number','75')}${u('line_gross_amount','number','85')}
+    <td><button onclick="removeLine(${idx},${li})" class="text-gray-300 hover:text-red-500">
+      <i class="fas fa-times text-xs"></i></button></td>
+  </tr>`;
+}
+
+function toggleAccordion(idx){
+  const body=document.getElementById('acc-body-'+idx);
+  const chev=document.getElementById('chev-'+idx);
+  const hidden=body.style.display==='none';
+  body.style.display=hidden?'':'none';
+  chev.style.transform=hidden?'':'rotate(-90deg)';
+}
+
+function addLine(idx){
+  const data=collectReviewData();
+  const items=data.invoices[idx].line_items;
+  items.push({supplier_sku:'',description:'',quantity:1,unit:'pcs',units_per_pack:null,unit_price:0,discount_percent:0,line_net_amount:0,vat_rate:24,excise_duty_per_unit:0,line_gross_amount:0});
+  const tbody=document.getElementById('tbody-'+idx);
+  const li=items.length-1;
+  tbody.insertAdjacentHTML('beforeend',reviewLineRow(items[li],idx,li));
+}
+
+function removeLine(idx,li){
+  const data=collectReviewData();
+  data.invoices[idx].line_items.splice(li,1);
+  const container=document.getElementById('tbody-'+idx);
+  container.innerHTML=data.invoices[idx].line_items.map((it,newLi)=>reviewLineRow(it,idx,newLi)).join('');
+}
+
+function collectReviewData(){
+  const g=id=>(document.getElementById(id)||{}).value??'';
+  const n=S.extractedInvoices.length;
+  const invoices=Array.from({length:n},(_,idx)=>{
+    const items=[];
+    document.querySelectorAll(`[data-idx="${idx}"][data-k="description"]`).forEach(el=>{
+      const li=parseInt(el.dataset.li);
+      const item={};
+      document.querySelectorAll(`[data-idx="${idx}"][data-li="${li}"]`).forEach(f=>{
+        const k=f.dataset.k;
+        if(k==='units_per_pack') item[k]=parseInt(f.value)||null;
+        else if(f.type==='number') item[k]=parseFloat(f.value)||0;
+        else item[k]=f.value;
+      });
+      items.push(item);
+    });
+    return {
+      invoice_number:g('inv-num-'+idx), invoice_date:g('inv-date-'+idx),
+      net_amount:parseFloat(g('inv-net-'+idx))||0,
+      vat_amount:parseFloat(g('inv-vat-'+idx))||0,
+      excise_duty_amount:parseFloat(g('inv-efc-'+idx))||0,
+      gross_amount:parseFloat(g('inv-gross-'+idx))||0,
+      supplier:{
+        name:g('inv-sup-name-'+idx), trade_name:g('inv-sup-trade-'+idx),
+        vat_number:g('inv-sup-vat-'+idx), phone:g('inv-sup-phone-'+idx),
+        address:g('inv-sup-addr-'+idx),
+      },
+      line_items:items,
+    };
+  });
+  return {invoices};
+}
+
+async function doImport(){
+  const btn=document.getElementById('import-btn');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Importing…';
+  try{
+    const payload=collectReviewData();
+    const res=await fetch('/api/import-invoice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const json=await res.json();
+    if(!res.ok||json.error)throw new Error(json.error);
+    setStep(3);
+    document.getElementById('review-panel').classList.add('hidden');
+    document.getElementById('success-panel').classList.remove('hidden');
+    const n=json.invoice_ids.length;
+    document.getElementById('success-msg').textContent=`${n} invoice${n>1?'s':''} imported (IDs: ${json.invoice_ids.join(', ')})`;
+    const warns=json.warnings||[];
+    const warnEl=document.getElementById('import-warnings');
+    if(warns.length){
+      warnEl.innerHTML=`<div class="mt-4 text-left">
+        <div class="flex items-center gap-2 text-amber-700 font-semibold text-sm mb-2">
+          <i class="fas fa-triangle-exclamation"></i> ${warns.length} SKU name mismatch${warns.length>1?'es':''}
+        </div>
+        <div class="space-y-2">${warns.map(w=>`
+          <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs">
+            <span class="font-mono font-bold text-amber-800">SKU ${w.sku}</span>
+            <div class="mt-1 text-gray-600">Existing: <span class="font-medium">${w.existing_name}</span></div>
+            <div class="text-gray-600">Invoice:  <span class="font-medium text-amber-700">${w.invoice_name}</span></div>
+          </div>`).join('')}
+        </div>
+      </div>`;
+      warnEl.classList.remove('hidden');
+    } else {
+      warnEl.classList.add('hidden');
+    }
+    S.invoicesLoaded=false; S.dashLoaded=false;
+  }catch(err){
+    toast('Import failed: '+err.message,'error');
+  }finally{
+    btn.disabled=false;btn.innerHTML='<i class="fas fa-database"></i> Import All to Database';
+  }
+}
+
+function resetImport(){
+  setStep(1);
+  ['upload-panel'].forEach(id=>document.getElementById(id).classList.remove('hidden'));
+  ['review-panel','success-panel'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+  document.getElementById('extract-progress').classList.add('hidden');
+  document.getElementById('file-input').value='';
+  S.extractedInvoices=[];
+}
+
+// ════════════════════════════════════════════════════════════════
+// PRODUCTS
+// ════════════════════════════════════════════════════════════════
+async function loadFilters(){
+  const [cats,sups,units]=await Promise.all([
+    fetch('/api/categories').then(r=>r.json()),
+    fetch('/api/suppliers').then(r=>r.json()),
+    fetch('/api/units').then(r=>r.json()),
+  ]);
+  S.categories=cats; S.units=units; S.suppliers=sups;
+
+  const catSel=document.getElementById('prod-category');
+  const byId=Object.fromEntries(cats.map(c=>[c.id,c]));
+  const label=c=>c.parent_id&&byId[c.parent_id]?`  ${byId[c.parent_id].name} › ${c.name}`:c.name;
+  cats.sort((a,b)=>label(a).localeCompare(label(b)));
+  cats.forEach(c=>catSel.innerHTML+=`<option value="${c.id}">${label(c)}</option>`);
+
+  const supSel=document.getElementById('prod-supplier');
+  sups.forEach(s=>supSel.innerHTML+=`<option value="${s.id}">${s.trade_name||s.name}</option>`);
+
+  const editCat=document.getElementById('edit-category');
+  cats.forEach(c=>editCat.innerHTML+=`<option value="${c.id}">${c.name}</option>`);
+
+  const editUnit=document.getElementById('edit-unit');
+  units.forEach(u=>editUnit.innerHTML+=`<option value="${u.id}">${u.name} (${u.abbreviation})</option>`);
+
+  const packUnit=document.getElementById('edit-pack-unit');
+  units.forEach(u=>packUnit.innerHTML+=`<option value="${u.id}">${u.name} (${u.abbreviation})</option>`);
+}
+
+function sortProducts(col){
+  if(S.prodSortBy===col) S.prodSortDir=S.prodSortDir==='asc'?'desc':'asc';
+  else{ S.prodSortBy=col; S.prodSortDir='asc'; }
+  searchProducts(1);
+}
+
+async function searchProducts(page=1){
+  S.prodPage=page;
+  const q=document.getElementById('prod-search').value;
+  const cat=document.getElementById('prod-category').value;
+  const sup=document.getElementById('prod-supplier').value;
+  const params=new URLSearchParams({q,page,category_id:cat,supplier_id:sup,sort_by:S.prodSortBy,sort_dir:S.prodSortDir});
+  const data=await fetch('/api/products/search?'+params).then(r=>r.json());
+
+  const wrap=document.getElementById('prod-results');
+  if(!data.products.length){
+    wrap.innerHTML='<div class="text-center py-10 text-gray-400 text-sm">No products found.</div>';
+    document.getElementById('prod-pagination').classList.add('hidden');return;
+  }
+
+  const sortIcon=col=>{
+    if(S.prodSortBy!==col) return '<i class="fas fa-sort text-gray-300 ml-1 text-xs"></i>';
+    return S.prodSortDir==='asc'
+      ?'<i class="fas fa-sort-up text-indigo-500 ml-1 text-xs"></i>'
+      :'<i class="fas fa-sort-down text-indigo-500 ml-1 text-xs"></i>';
+  };
+  const th=(label,col)=>`<th class="cursor-pointer select-none hover:bg-gray-100" onclick="sortProducts('${col}')">${label}${sortIcon(col)}</th>`;
+
+  // cache for onclick-safe access
+  data.products.forEach(p=>{ S._productById[p.id]=p; });
+
+  wrap.innerHTML=`<div class="overflow-x-auto"><table class="tbl">
+    <thead><tr>${th('SKU','sku')}${th('Name','name')}${th('Category','category')}<th>Supplier</th><th>Vol</th><th>ABV</th><th>Unit</th><th>Pack</th><th style="text-align:right">Price</th><th style="text-align:right">Per Unit</th><th style="text-align:right">Total Qty</th><th></th></tr></thead>
+    <tbody>${data.products.map(p=>{
+      const packStr=p.units_per_pack
+        ?`${p.units_per_pack}×${p.pack_unit||''}${p.pack_unit_size_ml?(p.pack_unit_size_ml>=1000?(p.pack_unit_size_ml/1000)+'L':p.pack_unit_size_ml+'ml'):''}`
+        :'—';
+      const perUnit=p.current_price&&p.units_per_pack?eur(p.current_price/p.units_per_pack):'—';
+      return`<tr>
+      <td class="font-mono text-xs text-gray-400">${p.supplier_sku||'—'}</td>
+      <td class="font-medium text-gray-800" title="${p.description||''}">${p.name}</td>
+      <td>${p.category?`<span class="badge badge-blue">${p.category}</span>`:'<span class="text-gray-300">—</span>'}</td>
+      <td class="text-gray-500">${p.supplier||'—'}</td>
+      <td class="text-gray-400">${p.volume_ml?p.volume_ml+'ml':'—'}</td>
+      <td class="text-gray-400">${p.abv_percent?p.abv_percent+'%':'—'}</td>
+      <td class="text-gray-400">${p.unit||'—'}</td>
+      <td class="text-gray-400 text-xs">${packStr}</td>
+      <td class="text-right font-medium">${p.current_price?eur(p.current_price):'—'}</td>
+      <td class="text-right text-xs text-indigo-600 font-medium">${perUnit}</td>
+      <td class="text-right text-xs text-gray-500">${p.total_quantity_ordered?fmt(p.total_quantity_ordered):'—'}</td>
+      <td><button class="btn btn-secondary btn-sm" onclick="openEditModal(${p.id})">
+        <i class="fas fa-pen text-xs"></i></button></td>
+    </tr>`}).join('')}</tbody>
+  </table></div>`;
+
+  const pages=Math.ceil(data.total/data.per_page);
+  document.getElementById('prod-total-label').textContent=`${data.total} product${data.total!==1?'s':''}`;
+  document.getElementById('prod-pg-btns').innerHTML=renderPagination(page,pages,'searchProducts($p)');
+  document.getElementById('prod-pagination').classList.toggle('hidden',pages<=1);
+}
+
+// ════════════════════════════════════════════════════════════════
+// EDIT MODAL
+// ════════════════════════════════════════════════════════════════
+async function openEditModal(idOrObj){
+  const p = (typeof idOrObj === 'object') ? idOrObj : (S._productById[idOrObj] || {id: idOrObj});
+  document.getElementById('edit-product-id').value=p.id;
+  document.getElementById('edit-sp-id').value=p.supplier_product_id||'';
+  document.getElementById('edit-name').value=p.name||'';
+  document.getElementById('edit-desc').value=p.description||'';
+  document.getElementById('edit-sku').value=p.supplier_sku||'';
+  document.getElementById('edit-volume').value=p.volume_ml||'';
+  document.getElementById('edit-abv').value=p.abv_percent||'';
+  const catSel=document.getElementById('edit-category');
+  const catOpt=[...catSel.options].find(o=>S.categories.find(c=>c.id==o.value&&c.name===p.category));
+  if(catOpt)catSel.value=catOpt.value; else catSel.value='';
+  const uSel=document.getElementById('edit-unit');
+  const uOpt=[...uSel.options].find(o=>S.units.find(u=>u.id==o.value&&u.abbreviation===p.unit));
+  if(uOpt)uSel.value=uOpt.value; else uSel.value='';
+  document.getElementById('edit-units-per-pack').value=p.units_per_pack||'';
+  document.getElementById('edit-pack-unit-size').value=p.pack_unit_size_ml||'';
+  const puSel=document.getElementById('edit-pack-unit');
+  const puOpt=[...puSel.options].find(o=>S.units.find(u=>u.id==o.value&&u.abbreviation===p.pack_unit));
+  puSel.value=puOpt?puOpt.value:'';
+  updatePackPreview(p);
+  document.getElementById('edit-invoice-history').innerHTML=
+    '<div class="text-center py-4"><div class="spinner mx-auto"></div></div>';
+  document.getElementById('edit-modal').classList.remove('hidden');
+  // Load invoice history async (don't block modal opening)
+  _loadProductInvoiceHistory(p.id);
+}
+
+async function _loadProductInvoiceHistory(productId){
+  const rows = await fetch('/api/products/'+productId+'/invoices').then(r=>r.json());
+  const wrap = document.getElementById('edit-invoice-history');
+  if(!rows.length){
+    wrap.innerHTML='<p class="text-gray-400 text-sm">No invoices found for this product.</p>';
+    return;
+  }
+  wrap.innerHTML=`<div class="overflow-x-auto"><table class="tbl">
+    <thead><tr>
+      <th>Invoice #</th><th>Date</th><th>Supplier</th>
+      <th style="text-align:right">Qty</th><th>Unit</th>
+      <th style="text-align:right">Unit Price</th><th style="text-align:right">Line Total</th>
+    </tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      <td class="font-mono text-xs font-medium">${r.invoice_number}</td>
+      <td class="text-gray-500 text-xs">${r.invoice_date}</td>
+      <td class="text-gray-700 text-xs">${r.supplier_name}</td>
+      <td class="text-right">${fmt(r.quantity)}</td>
+      <td class="text-gray-400 text-xs">${r.unit||'—'}</td>
+      <td class="text-right text-xs">${eur(r.unit_price)}</td>
+      <td class="text-right text-xs font-medium">${eur(r.line_gross_amount)}</td>
+    </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+function closeEditModal(){document.getElementById('edit-modal').classList.add('hidden');}
+
+function updatePackPreview(p){
+  const qty  = parseInt(document.getElementById('edit-units-per-pack').value)||0;
+  const size = parseFloat(document.getElementById('edit-pack-unit-size').value)||0;
+  const puSel= document.getElementById('edit-pack-unit');
+  const puLabel = puSel.selectedIndex>0 ? puSel.options[puSel.selectedIndex].text.split(' (')[0] : '';
+  const prev = document.getElementById('edit-pack-preview');
+  if(qty && puLabel){
+    const sizeStr = size ? ` × ${size>=1000?(size/1000)+'L':size+'ml'}` : '';
+    prev.textContent = `1 pack = ${qty} ${puLabel}${sizeStr}`;
+  } else {
+    prev.textContent='';
+  }
+}
+
+async function saveProduct(){
+  const id=document.getElementById('edit-product-id').value;
+  const payload={
+    name:document.getElementById('edit-name').value,
+    description:document.getElementById('edit-desc').value,
+    category_id:document.getElementById('edit-category').value||null,
+    unit_id:document.getElementById('edit-unit').value||null,
+    volume_ml:parseFloat(document.getElementById('edit-volume').value)||null,
+    abv_percent:parseFloat(document.getElementById('edit-abv').value)||null,
+    supplier_sku:document.getElementById('edit-sku').value,
+    supplier_product_id:document.getElementById('edit-sp-id').value||null,
+    units_per_pack:parseInt(document.getElementById('edit-units-per-pack').value)||null,
+    pack_unit_id:document.getElementById('edit-pack-unit').value||null,
+    pack_unit_size_ml:parseFloat(document.getElementById('edit-pack-unit-size').value)||null,
+  };
+  const res=await fetch('/api/products/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const json=await res.json();
+  if(json.error){toast(json.error,'error');return;}
+  toast('Product saved');
+  closeEditModal();
+  searchProducts(S.prodPage);
+}
+
+// ════════════════════════════════════════════════════════════════
+// CATEGORIES
+// ════════════════════════════════════════════════════════════════
+async function loadCategories(){
+  const wrap=document.getElementById('cat-list-wrap');
+  wrap.innerHTML='<div class="text-center py-10"><div class="spinner mx-auto"></div></div>';
+  const cats=await fetch('/api/categories').then(r=>r.json());
+  S.categories=cats;
+  if(!cats.length){
+    wrap.innerHTML='<div class="text-center py-10 text-gray-400 text-sm"><i class="fas fa-tags text-2xl mb-2 block"></i>No categories yet.</div>';
+    return;
+  }
+  const byId=Object.fromEntries(cats.map(c=>[c.id,c]));
+  const top=cats.filter(c=>!c.parent_id);
+  const children=id=>cats.filter(c=>c.parent_id===id);
+  const prodCount=async()=>{
+    const ps=await fetch('/api/products/search?q=&page=1&per_page=1').then(r=>r.json());
+    return {};
+  };
+  function catRow(c,indent=0){
+    const subs=children(c.id);
+    const pad=indent*20;
+    return `<tr>
+      <td style="padding-left:${12+pad}px">
+        ${indent?'<i class="fas fa-level-up-alt fa-rotate-90 text-gray-200 mr-2 text-xs"></i>':''}
+        <span class="font-medium text-gray-800">${c.name}</span>
+        ${subs.length?`<span class="badge badge-gray ml-2">${subs.length} sub</span>`:''}
+      </td>
+      <td class="text-gray-400 text-xs">${c.parent_id?(byId[c.parent_id]?.name||''):'—'}</td>
+      <td class="text-right">
+        <button class="btn btn-secondary btn-sm mr-1" onclick='openCatModal(${JSON.stringify(c)})'><i class="fas fa-pen text-xs"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCat(${c.id},'${c.name.replace(/'/g,"\\'")}')"><i class="fas fa-trash text-xs"></i></button>
+      </td>
+    </tr>${subs.map(s=>catRow(s,indent+1)).join('')}`;
+  }
+  wrap.innerHTML=`<div class="overflow-x-auto"><table class="tbl">
+    <thead><tr><th>Name</th><th>Parent</th><th style="text-align:right">Actions</th></tr></thead>
+    <tbody>${top.map(c=>catRow(c,0)).join('')}</tbody>
+  </table></div>`;
+}
+
+function openCatModal(cat=null){
+  const modal=document.getElementById('cat-modal');
+  document.getElementById('cat-modal-title').textContent=cat?'Edit Category':'New Category';
+  document.getElementById('cat-modal-id').value=cat?cat.id:'';
+  document.getElementById('cat-modal-name').value=cat?cat.name:'';
+  const sel=document.getElementById('cat-modal-parent');
+  sel.innerHTML='<option value="">— top level —</option>';
+  S.categories.filter(c=>!cat||c.id!==cat.id).forEach(c=>{
+    sel.innerHTML+=`<option value="${c.id}" ${cat&&cat.parent_id===c.id?'selected':''}>${c.name}</option>`;
+  });
+  modal.classList.remove('hidden');
+  setTimeout(()=>document.getElementById('cat-modal-name').focus(),50);
+}
+function closeCatModal(){document.getElementById('cat-modal').classList.add('hidden');}
+
+async function saveCat(){
+  const id=document.getElementById('cat-modal-id').value;
+  const name=document.getElementById('cat-modal-name').value.trim();
+  const parent_id=document.getElementById('cat-modal-parent').value||null;
+  if(!name){toast('Name is required','error');return;}
+  const url=id?'/api/categories/'+id:'/api/categories';
+  const method=id?'PUT':'POST';
+  const res=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify({name,parent_id})});
+  const json=await res.json();
+  if(json.error){toast(json.error,'error');return;}
+  toast(id?'Category updated':'Category created');
+  closeCatModal();
+  loadCategories();
+  refreshCategoryDropdowns();
+}
+
+async function deleteCat(id,name){
+  if(!confirm(`Delete category "${name}"?`))return;
+  const res=await fetch('/api/categories/'+id,{method:'DELETE'});
+  const json=await res.json();
+  if(json.error){toast(json.error,'error');return;}
+  toast('Category deleted');
+  loadCategories();
+  refreshCategoryDropdowns();
+}
+
+async function refreshCategoryDropdowns(){
+  const cats=await fetch('/api/categories').then(r=>r.json());
+  S.categories=cats;
+  const byId=Object.fromEntries(cats.map(c=>[c.id,c]));
+  const label=c=>c.parent_id&&byId[c.parent_id]?`  ${byId[c.parent_id].name} › ${c.name}`:c.name;
+  const sorted=[...cats].sort((a,b)=>label(a).localeCompare(label(b)));
+  const catSel=document.getElementById('prod-category');
+  const cur=catSel.value;
+  catSel.innerHTML='<option value="">All categories</option>';
+  sorted.forEach(c=>catSel.innerHTML+=`<option value="${c.id}">${label(c)}</option>`);
+  catSel.value=cur;
+  const editCat=document.getElementById('edit-category');
+  const ecur=editCat.value;
+  editCat.innerHTML='<option value="">— none —</option>';
+  sorted.forEach(c=>editCat.innerHTML+=`<option value="${c.id}">${c.name}</option>`);
+  editCat.value=ecur;
+}
+
+// ════════════════════════════════════════════════════════════════
+// SUPPLIERS  — dashboard + slide-over detail
+// ════════════════════════════════════════════════════════════════
+const _CAT_BORDER={
+  'Beverages':'#3b82f6','Spirits':'#8b5cf6','Wine':'#f43f5e','Beer':'#f59e0b',
+  'Soft Drinks':'#06b6d4','Coffee & Hot Beverages':'#f97316','Food':'#22c55e',
+  'Dairy & Cheese':'#eab308','Bakery & Confectionery':'#ec4899','Savory Pies':'#84cc16',
+  'Oils & Vinegars':'#f59e0b','Bar Supplies':'#6366f1','Deli & Charcuterie':'#ef4444',
+};
+function catBorder(c){ return _CAT_BORDER[c]||'#d1d5db'; }
+
+async function loadSuppliers(){
+  const sups = await fetch('/api/suppliers').then(r=>r.json());
+  S._allSuppliers = sups;
+
+  // Dashboard metrics
+  const totalSpend = sups.reduce((a,s)=>a+(s.total_spend||0),0);
+  const totalInv   = sups.reduce((a,s)=>a+(s.invoice_count||0),0);
+  const totalProd  = sups.reduce((a,s)=>a+(s.product_count||0),0);
+  document.getElementById('sup-metrics').innerHTML=[
+    {icon:'truck',         color:'bg-indigo-50 text-indigo-600',  val:sups.length,      label:'Suppliers'},
+    {icon:'file-invoice',  color:'bg-purple-50 text-purple-600',  val:totalInv,         label:'Total Invoices'},
+    {icon:'euro-sign',     color:'bg-green-50 text-green-600',    val:eur(totalSpend),  label:'Total Spend'},
+    {icon:'boxes-stacked', color:'bg-blue-50 text-blue-600',      val:totalProd,        label:'Products'},
+  ].map(({icon,color,val,label})=>`
+    <div class="stat-card">
+      <div class="w-10 h-10 rounded-xl ${color} flex items-center justify-center flex-shrink-0"><i class="fas fa-${icon}"></i></div>
+      <div><div class="text-xl font-bold text-gray-900">${val}</div><div class="text-xs text-gray-500">${label}</div></div>
+    </div>`).join('');
+
+  // Category chips
+  S.supCatFilter = S.supCatFilter||'';
+  const cats=[...new Set(sups.map(s=>s.primary_category).filter(Boolean))].sort();
+  document.getElementById('sup-chips').innerHTML=
+    `<button class="chip ${!S.supCatFilter?'chip-active':''}" onclick="setSupCat('')">All</button>`+
+    cats.map(c=>`<button class="chip ${S.supCatFilter===c?'chip-active':''}" onclick="setSupCat('${c.replace(/'/g,"\\'")}')">${c}</button>`).join('');
+
+  renderSuppliers();
+}
+
+function renderSuppliers(){
+  const q   =(document.getElementById('sup-search')?.value||'').toLowerCase();
+  const srt = document.getElementById('sup-sort')?.value||'name';
+  let sups=[...(S._allSuppliers||[])];
+  if(q) sups=sups.filter(s=>((s.trade_name||s.name)+' '+(s.vat_number||'')).toLowerCase().includes(q));
+  if(S.supCatFilter) sups=sups.filter(s=>s.primary_category===S.supCatFilter);
+  sups.sort((a,b)=>{
+    if(srt==='spend')    return (b.total_spend||0)-(a.total_spend||0);
+    if(srt==='invoices') return (b.invoice_count||0)-(a.invoice_count||0);
+    if(srt==='products') return (b.product_count||0)-(a.product_count||0);
+    return (a.trade_name||a.name).localeCompare(b.trade_name||b.name);
+  });
+  const wrap=document.getElementById('sup-content');
+  if(!sups.length){wrap.innerHTML='<div class="text-center py-16 text-gray-400 text-sm"><i class="fas fa-truck text-4xl mb-3 block text-gray-200"></i>No suppliers found.</div>';return;}
+  wrap.innerHTML=(S.supView==='table')?_supTable(sups):_supGrid(sups);
+}
+
+function setSupCat(cat){
+  S.supCatFilter=cat;
+  document.querySelectorAll('#sup-chips .chip').forEach(el=>{
+    el.classList.toggle('chip-active',(el.textContent.trim()===(cat||'All')));
+  });
+  renderSuppliers();
+}
+
+function setSupView(v){
+  S.supView=v;
+  const gBtn=document.getElementById('btn-view-grid'),tBtn=document.getElementById('btn-view-table');
+  gBtn.className='px-3 py-2 '+(v==='grid'?'bg-indigo-600 text-white':'text-gray-500 hover:bg-gray-50');
+  tBtn.className='px-3 py-2 '+(v==='table'?'bg-indigo-600 text-white':'text-gray-500 hover:bg-gray-50');
+  renderSuppliers();
+}
+
+function _supGrid(sups){
+  return`<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">${sups.map(s=>`
+    <div class="sup-card" style="border-left-color:${catBorder(s.primary_category)}" onclick="loadSupplierDetail(${s.id})">
+      <div class="flex justify-between items-start mb-3">
+        <div class="min-w-0 flex-1 mr-2">
+          <div class="font-semibold text-gray-900 truncate">${s.trade_name||s.name}</div>
+          ${s.trade_name?`<div class="text-xs text-gray-400 truncate">${s.name}</div>`:''}
+          <div class="text-xs text-gray-300 mt-0.5 font-mono">VAT ${s.vat_number||'—'}</div>
+        </div>
+        <button class="btn btn-secondary btn-sm flex-shrink-0" onclick="event.stopPropagation();quickSupEdit(${s.id})" title="Edit">
+          <i class="fas fa-pen text-xs"></i>
+        </button>
+      </div>
+      ${s.primary_category?`<span class="badge badge-blue text-xs">${s.primary_category}</span>`:''}
+      <div class="grid grid-cols-3 text-center mt-3 pt-3 border-t border-gray-100">
+        <div><div class="text-sm font-bold text-gray-800">${s.invoice_count}</div><div class="text-xs text-gray-400">Invoices</div></div>
+        <div class="border-x border-gray-100"><div class="text-sm font-bold text-gray-800">${eur(s.total_spend)}</div><div class="text-xs text-gray-400">Spend</div></div>
+        <div><div class="text-sm font-bold text-gray-800">${s.product_count}</div><div class="text-xs text-gray-400">Products</div></div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function _supTable(sups){
+  return`<div class="card p-0 overflow-hidden"><div class="overflow-x-auto"><table class="tbl">
+    <thead><tr><th>Supplier</th><th>VAT</th><th>Category</th>
+      <th style="text-align:right">Invoices</th><th style="text-align:right">Total Spend</th>
+      <th style="text-align:right">Products</th><th></th></tr></thead>
+    <tbody>${sups.map(s=>`<tr class="cursor-pointer" onclick="loadSupplierDetail(${s.id})">
+      <td>
+        <div class="font-medium text-gray-900">${s.trade_name||s.name}</div>
+        ${s.trade_name?`<div class="text-xs text-gray-400">${s.name}</div>`:''}
+      </td>
+      <td class="font-mono text-xs text-gray-400">${s.vat_number||'—'}</td>
+      <td>${s.primary_category?`<span class="badge badge-blue">${s.primary_category}</span>`:'<span class="text-gray-300">—</span>'}</td>
+      <td class="text-right">${s.invoice_count}</td>
+      <td class="text-right font-medium">${eur(s.total_spend)}</td>
+      <td class="text-right">${s.product_count}</td>
+      <td><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();quickSupEdit(${s.id})"><i class="fas fa-pen text-xs"></i></button></td>
+    </tr>`).join('')}</tbody>
+  </table></div></div>`;
+}
+
+function quickSupEdit(id){
+  const s=(S._allSuppliers||[]).find(x=>x.id===id);
+  S._currentSupplierId=id;
+  S._currentSupplier=s||{id};
+  openSupEditModal();
+}
+
+async function loadSupplierDetail(id){
+  // Open slide-over immediately, show loading
+  document.getElementById('sup-slideout').classList.add('open');
+  document.getElementById('sup-backdrop').classList.add('open');
+  document.getElementById('sup-trade-name').textContent='Loading…';
+  document.getElementById('sup-legal-name').textContent='';
+  document.getElementById('sup-info-grid').innerHTML='';
+  document.getElementById('sup-stats').innerHTML='<div class="text-center py-4 col-span-3"><div class="spinner mx-auto"></div></div>';
+  document.getElementById('sup-invoices').innerHTML='';
+  document.getElementById('sup-products').innerHTML='';
+
+  const s=await fetch('/api/suppliers/'+id).then(r=>r.json());
+  S._currentSupplierId=id; S._currentSupplier=s;
+
+  document.getElementById('sup-trade-name').textContent=s.trade_name||s.name;
+  document.getElementById('sup-legal-name').textContent=s.trade_name?s.name:'';
+  document.getElementById('sup-status').textContent=s.is_active?'Active':'Inactive';
+  document.getElementById('sup-status').className='badge '+(s.is_active?'badge-green':'badge-gray');
+
+  const info=[
+    ['VAT / AFM',s.vat_number],['Phone',s.phone],['Email',s.email],
+    ['Address',s.address],['Payment Terms',s.payment_terms],['Since',s.created_at?.slice(0,10)],
+  ].filter(([,v])=>v);
+  document.getElementById('sup-info-grid').innerHTML=info.map(([k,v])=>`
+    <div><div class="text-xs text-gray-400 uppercase font-semibold tracking-wide mb-0.5">${k}</div><div class="text-gray-800 text-sm">${v}</div></div>`).join('');
+
+  const st=s.stats;
+  document.getElementById('sup-stats').innerHTML=[
+    {icon:'file-invoice',  color:'bg-purple-50 text-purple-600', val:st.invoice_count,    label:'Invoices'},
+    {icon:'euro-sign',     color:'bg-green-50 text-green-600',   val:eur(st.total_spend), label:'Total Spend'},
+    {icon:'boxes-stacked', color:'bg-blue-50 text-blue-600',     val:st.product_count,    label:'Products'},
+  ].map(({icon,color,val,label})=>`
+    <div class="stat-card">
+      <div class="w-9 h-9 rounded-xl ${color} flex items-center justify-center flex-shrink-0 text-sm"><i class="fas fa-${icon}"></i></div>
+      <div><div class="text-lg font-bold text-gray-900">${val}</div><div class="text-xs text-gray-500">${label}</div></div>
+    </div>`).join('');
+
+  const sb=st=>({received:'badge-yellow',verified:'badge-blue',posted:'badge-green',disputed:'badge-red'}[st]||'badge-gray');
+  document.getElementById('sup-invoices').innerHTML=s.invoices.length
+    ?`<div class="overflow-x-auto"><table class="tbl">
+      <thead><tr><th>Invoice #</th><th>Date</th><th>Lines</th>
+        <th style="text-align:right">Net</th><th style="text-align:right">Gross</th><th>Status</th><th></th></tr></thead>
+      <tbody>${s.invoices.map(i=>`<tr>
+        <td class="font-mono text-xs font-medium">${i.invoice_number}</td>
+        <td class="text-gray-500 text-xs">${i.invoice_date}</td>
+        <td class="text-gray-400 text-xs">${i.line_count}</td>
+        <td class="text-right text-xs">${eur(i.net_amount)}</td>
+        <td class="text-right text-xs font-bold">${eur(i.gross_amount)}</td>
+        <td><span class="badge ${sb(i.status)}">${i.status}</span></td>
+        <td><button class="btn btn-secondary btn-sm" onclick="closeSupDetail();showSection('invoices');setTimeout(()=>showInvoiceDetail(${i.id},'${i.invoice_number.replace(/'/g,"\\'")}'),350)">
+          <i class="fas fa-eye text-xs"></i></button></td>
+      </tr>`).join('')}</tbody></table></div>`
+    :'<p class="text-gray-400 text-sm">No invoices yet.</p>';
+
+  s.products.forEach(p=>{ S._productById[p.id]=p; });
+  document.getElementById('sup-prod-count').textContent=`${s.products.length} product${s.products.length!==1?'s':''}`;
+  document.getElementById('sup-products').innerHTML=s.products.length
+    ?`<div class="overflow-x-auto"><table class="tbl">
+      <thead><tr><th>SKU</th><th>Name</th><th>Category</th><th>Unit</th>
+        <th style="text-align:right">Price</th><th style="text-align:right">Total Qty</th><th></th></tr></thead>
+      <tbody>${s.products.map(p=>`<tr>
+        <td class="font-mono text-xs text-gray-400">${p.supplier_sku||'—'}</td>
+        <td class="font-medium text-gray-800">${p.name}</td>
+        <td>${p.category?`<span class="badge badge-blue">${p.category}</span>`:'<span class="text-gray-300">—</span>'}</td>
+        <td class="text-gray-400 text-xs">${p.unit||'—'}</td>
+        <td class="text-right font-medium">${p.current_price?eur(p.current_price):'—'}</td>
+        <td class="text-right text-gray-400 text-xs">${p.total_quantity_ordered!=null?fmt(p.total_quantity_ordered):'—'}</td>
+        <td><button class="btn btn-secondary btn-sm" onclick="openEditModal(${p.id})">
+          <i class="fas fa-pen text-xs"></i></button></td>
+      </tr>`).join('')}</tbody></table></div>`
+    :'<p class="text-gray-400 text-sm">No products yet.</p>';
+}
+
+function closeSupDetail(){
+  document.getElementById('sup-slideout').classList.remove('open');
+  document.getElementById('sup-backdrop').classList.remove('open');
+}
+
+function openSupEditModal(){
+  const s=S._currentSupplier;
+  if(!s) return;
+  document.getElementById('sup-edit-id').value      =s.id;
+  document.getElementById('sup-edit-name').value    =s.name||'';
+  document.getElementById('sup-edit-trade').value   =s.trade_name||'';
+  document.getElementById('sup-edit-vat').value     =s.vat_number||'';
+  document.getElementById('sup-edit-phone').value   =s.phone||'';
+  document.getElementById('sup-edit-email').value   =s.email||'';
+  document.getElementById('sup-edit-address').value =s.address||'';
+  document.getElementById('sup-edit-modal').classList.remove('hidden');
+}
+function closeSupEditModal(){document.getElementById('sup-edit-modal').classList.add('hidden');}
+
+async function saveSupplier(){
+  const id=document.getElementById('sup-edit-id').value;
+  const body={
+    name:       document.getElementById('sup-edit-name').value.trim(),
+    trade_name: document.getElementById('sup-edit-trade').value.trim(),
+    vat_number: document.getElementById('sup-edit-vat').value.trim(),
+    phone:      document.getElementById('sup-edit-phone').value.trim(),
+    email:      document.getElementById('sup-edit-email').value.trim(),
+    address:    document.getElementById('sup-edit-address').value.trim(),
+  };
+  const res=await fetch('/api/suppliers/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
+  if(res.error){alert(res.error);return;}
+  closeSupEditModal();
+  await loadSuppliers();
+  if(S._currentSupplierId===parseInt(id)) loadSupplierDetail(id);
+}
+
+async function deleteSupplier(){
+  const s=S._currentSupplier;
+  if(!s) return;
+  if(!confirm(`Delete "${s.trade_name||s.name}"?\nThis cannot be undone. Merge first if they have invoices or products.`)) return;
+  const res=await fetch('/api/suppliers/'+s.id,{method:'DELETE'}).then(r=>r.json());
+  if(res.error){alert(res.error);return;}
+  closeSupDetail();
+  S._currentSupplierId=null; S._currentSupplier=null;
+  loadSuppliers();
+}
+
+async function openSupMergeModal(){
+  const s=S._currentSupplier;
+  if(!s) return;
+  document.getElementById('sup-merge-from-name').textContent=s.trade_name||s.name;
+  const all=S._allSuppliers||await fetch('/api/suppliers').then(r=>r.json());
+  document.getElementById('sup-merge-target').innerHTML=all
+    .filter(x=>x.id!==s.id)
+    .map(x=>`<option value="${x.id}">${x.trade_name||x.name} (VAT: ${x.vat_number||'—'})</option>`)
+    .join('');
+  document.getElementById('sup-merge-modal').classList.remove('hidden');
+}
+function closeSupMergeModal(){document.getElementById('sup-merge-modal').classList.add('hidden');}
+
+async function confirmMerge(){
+  const sourceId=S._currentSupplier?.id;
+  const targetId=document.getElementById('sup-merge-target').value;
+  if(!sourceId||!targetId) return;
+  if(!confirm('Merge and delete this supplier? This cannot be undone.')) return;
+  const res=await fetch('/api/suppliers/'+sourceId+'/merge',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({target_id:parseInt(targetId)}),
+  }).then(r=>r.json());
+  if(res.error){alert(res.error);return;}
+  closeSupMergeModal();
+  closeSupDetail();
+  S._currentSupplierId=null; S._currentSupplier=null;
+  await loadSuppliers();
+  loadSupplierDetail(targetId);
+}
+
+// ════════════════════════════════════════════════════════════════
+// INVOICES
+// ════════════════════════════════════════════════════════════════
+async function loadInvoices(){
+  S.invoicesLoaded=true;
+  const wrap=document.getElementById('invoice-list-wrap');
+  wrap.innerHTML='<div class="text-center py-10"><div class="spinner mx-auto"></div></div>';
+  const data=await fetch('/api/invoices').then(r=>r.json());
+  if(!data.length){wrap.innerHTML='<div class="text-center py-10 text-gray-400 text-sm">No invoices yet.</div>';return;}
+  const sb=s=>({received:'badge-yellow',verified:'badge-blue',posted:'badge-green',disputed:'badge-red'}[s]||'badge-gray');
+  wrap.innerHTML=`<div class="overflow-x-auto"><table class="tbl">
+    <thead><tr><th>Invoice #</th><th>Date</th><th>Supplier</th><th>Lines</th>
+      <th style="text-align:right">Net</th><th style="text-align:right">VAT</th>
+      <th style="text-align:right">EFC</th><th style="text-align:right">Gross</th>
+      <th>Status</th><th></th></tr></thead>
+    <tbody>${data.map(i=>`<tr>
+      <td class="font-mono text-xs font-medium">${i.invoice_number}</td>
+      <td class="text-gray-500 text-xs">${i.invoice_date}</td>
+      <td class="font-medium">${i.supplier_name}</td>
+      <td class="text-gray-400 text-xs">${i.line_count}</td>
+      <td class="text-right text-xs">${eur(i.net_amount)}</td>
+      <td class="text-right text-xs text-gray-400">${eur(i.vat_amount)}</td>
+      <td class="text-right text-xs text-gray-400">${eur(i.excise_duty_amount)}</td>
+      <td class="text-right text-xs font-bold">${eur(i.gross_amount)}</td>
+      <td><span class="badge ${sb(i.status)}">${i.status}</span></td>
+      <td class="text-right">
+        <button class="btn btn-secondary btn-sm mr-1" onclick="showInvoiceDetail(${i.id},'${i.invoice_number}')">
+          <i class="fas fa-eye text-xs"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteInvoice(${i.id},'${i.invoice_number.replace(/'/g,"\\'")}')" title="Delete invoice">
+          <i class="fas fa-trash text-xs"></i></button>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+async function showInvoiceDetail(id,num){
+  const panel=document.getElementById('invoice-detail');
+  panel.classList.remove('hidden');panel.scrollIntoView({behavior:'smooth'});
+  document.getElementById('inv-detail-title').textContent='Invoice '+num;
+  document.getElementById('inv-detail-kv').innerHTML='<div class="spinner"></div>';
+  const inv=await fetch('/api/invoices/'+id).then(r=>r.json());
+  document.getElementById('inv-detail-kv').innerHTML=`
+    <div class="kv-item"><label>Supplier</label><span>${inv.supplier_name}</span></div>
+    <div class="kv-item"><label>Date</label><span>${inv.invoice_date}</span></div>
+    <div class="kv-item"><label>Net</label><span>${eur(inv.net_amount)}</span></div>
+    <div class="kv-item"><label>VAT</label><span>${eur(inv.vat_amount)}</span></div>
+    <div class="kv-item"><label>Excise Duty</label><span>${eur(inv.excise_duty_amount)}</span></div>
+    <div class="kv-item"><label>Gross</label><span class="font-bold text-gray-900">${eur(inv.gross_amount)}</span></div>`;
+  document.getElementById('inv-detail-tbody').innerHTML=(inv.lines||[]).map(l=>`<tr>
+    <td class="font-mono text-xs text-gray-400">${l.supplier_sku||'—'}</td>
+    <td>${l.line_description}</td><td>${fmt(l.quantity)}</td><td class="text-gray-400">${l.unit||'—'}</td>
+    <td>${eur(l.unit_price)}</td><td class="text-gray-400">${fmt(l.discount_percent)}%</td>
+    <td>${eur(l.line_net_amount)}</td><td class="text-gray-400">${fmt(l.vat_rate)}%</td>
+    <td class="text-gray-400">${fmt(l.excise_duty_per_unit)}</td><td class="font-medium">${eur(l.line_gross_amount)}</td>
+  </tr>`).join('');
+}
+function closeInvoiceDetail(){document.getElementById('invoice-detail').classList.add('hidden');}
+
+async function deleteInvoice(id, num){
+  if(!confirm(`Delete invoice "${num}" and all its exclusive products?\n\nProducts that appear on other invoices will be kept.`)) return;
+  const res  = await fetch('/api/invoices/'+id, {method:'DELETE'});
+  const json = await res.json();
+  if(json.error){toast(json.error,'error');return;}
+  toast(`Invoice deleted — ${json.lines_deleted} lines, ${json.products_deleted} products removed`);
+  closeInvoiceDetail();
+  S.invoicesLoaded = false;
+  S.dashLoaded     = false;
+  loadInvoices();
+}
+
+// ════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════
+// RECIPES
+// ════════════════════════════════════════════════════════════════
+async function loadRecipes(){
+  const [recipes] = await Promise.all([
+    fetch('/api/composite-products').then(r=>r.json()),
+  ]);
+  S._allRecipes = recipes;
+
+  // Metrics
+  const totalRecipes = recipes.length;
+  const canMake      = recipes.filter(r=>r.max_producible>0).length;
+  const avgMargin    = recipes.filter(r=>r.margin_pct!=null).length
+    ? (recipes.reduce((s,r)=>s+(r.margin_pct||0),0) / recipes.filter(r=>r.margin_pct!=null).length).toFixed(1)
+    : '—';
+  document.getElementById('recipe-metrics').innerHTML=[
+    {icon:'utensils',        color:'bg-indigo-50 text-indigo-600',  val:totalRecipes,        label:'Recipes'},
+    {icon:'circle-check',    color:'bg-green-50 text-green-600',    val:canMake,             label:'Can Produce Now'},
+    {icon:'percent',         color:'bg-amber-50 text-amber-600',    val:avgMargin+'%',       label:'Avg Margin'},
+    {icon:'triangle-exclamation', color:'bg-red-50 text-red-500',   val:totalRecipes-canMake, label:'Stockout'},
+  ].map(({icon,color,val,label})=>`
+    <div class="stat-card">
+      <div class="w-10 h-10 rounded-xl ${color} flex items-center justify-center flex-shrink-0"><i class="fas fa-${icon}"></i></div>
+      <div><div class="text-xl font-bold text-gray-900">${val}</div><div class="text-xs text-gray-500">${label}</div></div>
+    </div>`).join('');
+
+  if(!recipes.length){
+    document.getElementById('recipe-list-wrap').innerHTML=`
+      <div class="text-center py-16 text-gray-400">
+        <i class="fas fa-utensils text-4xl mb-3 block text-gray-200"></i>
+        No recipes yet. Click <strong>New Recipe</strong> to create one.
+      </div>`;
+    return;
+  }
+
+  const marginColor=m=>m==null?'text-gray-400':m>=60?'text-green-600':m>=40?'text-amber-600':'text-red-500';
+  const prodBadge=n=>n>0
+    ?`<span class="badge badge-green">${n} units</span>`
+    :`<span class="badge badge-red">Stockout</span>`;
+
+  document.getElementById('recipe-list-wrap').innerHTML=`
+    <div class="card p-0 overflow-hidden"><div class="overflow-x-auto"><table class="tbl">
+      <thead><tr>
+        <th>Recipe</th><th>Category</th><th style="text-align:right">Components</th>
+        <th style="text-align:right">Food Cost</th><th style="text-align:right">Selling Price</th>
+        <th style="text-align:right">Margin</th><th>Can Produce</th><th></th>
+      </tr></thead>
+      <tbody>${recipes.map(r=>`<tr class="cursor-pointer" onclick="loadRecipeDetail(${r.id})">
+        <td><div class="font-semibold text-gray-900">${r.name}</div></td>
+        <td>${r.category?`<span class="badge badge-blue">${r.category}</span>`:'<span class="text-gray-300">—</span>'}</td>
+        <td class="text-right text-gray-500">${r.component_count}</td>
+        <td class="text-right font-medium">${eur(r.total_food_cost)}</td>
+        <td class="text-right">${r.selling_price?eur(r.selling_price):'<span class="text-gray-300">—</span>'}</td>
+        <td class="text-right font-bold ${marginColor(r.margin_pct)}">${r.margin_pct!=null?r.margin_pct+'%':'—'}</td>
+        <td>${prodBadge(r.max_producible)}</td>
+        <td class="flex gap-1">
+          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();loadRecipeDetail(${r.id})"><i class="fas fa-eye text-xs"></i></button>
+          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openRecipeModalById(${r.id})"><i class="fas fa-pen text-xs"></i></button>
+        </td>
+      </tr>`).join('')}
+      </tbody>
+    </table></div></div>`;
+}
+
+async function loadRecipeDetail(id){
+  document.getElementById('recipe-slideout').classList.add('open');
+  document.getElementById('recipe-backdrop').classList.add('open');
+  document.getElementById('rs-name').textContent='Loading…';
+  document.getElementById('rs-bom').innerHTML='<div class="text-center py-6"><div class="spinner mx-auto"></div></div>';
+
+  const r = await fetch('/api/composite-products/'+id).then(res=>res.json());
+  S._currentRecipe = r;
+
+  document.getElementById('rs-name').textContent     = r.name;
+  document.getElementById('rs-category').textContent = r.category||'';
+
+  const marginColor=m=>m==null?'text-gray-500':m>=60?'text-green-600':m>=40?'text-amber-600':'text-red-500';
+  document.getElementById('rs-metrics').innerHTML=[
+    {label:'Food Cost',       val:eur(r.total_food_cost),                          color:'bg-red-50 text-red-600',    icon:'fire'},
+    {label:'Selling Price',   val:r.selling_price?eur(r.selling_price):'—',        color:'bg-green-50 text-green-600',icon:'tag'},
+    {label:'Gross Margin',    val:r.margin_pct!=null?r.margin_pct+'%':'—',         color:'bg-amber-50 text-amber-600',icon:'percent'},
+    {label:'Can Produce',     val:r.max_producible>0?r.max_producible+' units':'Stockout', color:r.max_producible>0?'bg-indigo-50 text-indigo-600':'bg-red-50 text-red-500', icon:'industry'},
+  ].map(({label,val,color,icon})=>`
+    <div class="stat-card p-3">
+      <div class="w-8 h-8 rounded-lg ${color} flex items-center justify-center flex-shrink-0 text-xs"><i class="fas fa-${icon}"></i></div>
+      <div><div class="font-bold text-gray-900 text-base">${val}</div><div class="text-xs text-gray-500">${label}</div></div>
+    </div>`).join('');
+
+  document.getElementById('rs-servings-note').textContent =
+    r.servings > 1 ? `${r.servings} servings · ${eur(r.total_food_cost/r.servings)}/serving` : '';
+
+  // BOM table
+  document.getElementById('rs-bom').innerHTML=r.components.length
+    ?`<table class="tbl">
+      <thead><tr><th>Ingredient</th><th style="text-align:right">Qty</th><th>Unit</th>
+        <th style="text-align:right">Stock</th><th style="text-align:right">Unit Cost</th>
+        <th style="text-align:right">Line Cost</th><th style="text-align:right">Can Produce</th></tr></thead>
+      <tbody>${r.components.map(c=>`<tr ${c.can_produce===r.max_producible&&r.max_producible===0?'class="bg-red-50"':c.can_produce===r.max_producible?'class="bg-amber-50"':''}>
+        <td class="font-medium">${c.product_name}${c.can_produce===r.max_producible&&r.components.length>1?'<span class="badge badge-red ml-2 text-xs">bottleneck</span>':''}</td>
+        <td class="text-right">${fmt(c.quantity)}</td>
+        <td class="text-gray-400 text-xs">${c.unit||c.product_unit||'—'}</td>
+        <td class="text-right text-gray-500 text-xs">${fmt(c.stock_retail)}</td>
+        <td class="text-right text-xs text-gray-500">${eur(c.unit_cost)}</td>
+        <td class="text-right font-medium">${eur(c.component_cost)}</td>
+        <td class="text-right text-xs ${c.can_produce===r.max_producible?'text-amber-600 font-bold':'text-gray-500'}">${c.can_produce}</td>
+      </tr>`).join('')}
+      </tbody></table>`
+    :'<div class="p-4 text-gray-400 text-sm">No components defined.</div>';
+
+  document.getElementById('rs-total-cost').textContent = eur(r.total_food_cost);
+
+  // Producibility summary
+  const limited = r.components.length
+    ? r.components.reduce((a,b)=>a.can_produce<=b.can_produce?a:b,r.components[0])
+    : null;
+  document.getElementById('rs-producibility').innerHTML = r.max_producible > 0
+    ? `<div class="text-sm text-gray-600">
+        <span class="text-2xl font-bold text-green-600 mr-2">${r.max_producible}</span> units can be produced.
+        ${limited?`<br><span class="text-xs text-amber-600 mt-1 block"><i class="fas fa-triangle-exclamation mr-1"></i>Bottleneck: <strong>${limited.product_name}</strong> (${limited.can_produce} units available)</span>`:''}
+      </div>`
+    : `<div class="text-sm text-red-600 font-medium"><i class="fas fa-ban mr-2"></i>Cannot produce — one or more ingredients out of stock.
+        ${limited?`<div class="text-xs mt-1 text-red-500">Missing: <strong>${limited.product_name}</strong></div>`:''}
+      </div>`;
+
+  const notesWrap = document.getElementById('rs-notes-wrap');
+  if(r.notes){ document.getElementById('rs-notes').textContent=r.notes; notesWrap.classList.remove('hidden'); }
+  else notesWrap.classList.add('hidden');
+}
+
+function closeRecipeDetail(){
+  document.getElementById('recipe-slideout').classList.remove('open');
+  document.getElementById('recipe-backdrop').classList.remove('open');
+}
+
+// ─── Modal ────────────────────────────────────────────────────────────────
+let _bomRows = 0;
+
+async function openRecipeModal(recipe){
+  await _loadProductsForBom();
+  _bomRows = 0;
+  document.getElementById('recipe-modal-title').textContent = recipe?.id ? 'Edit Recipe' : 'New Recipe';
+  document.getElementById('rm-id').value       = recipe?.id||'';
+  document.getElementById('rm-name').value     = recipe?.name||'';
+  document.getElementById('rm-category').value = recipe?.category||'';
+  document.getElementById('rm-price').value    = recipe?.selling_price||'';
+  document.getElementById('rm-servings').value = recipe?.servings||1;
+  document.getElementById('rm-notes').value    = recipe?.notes||'';
+  document.getElementById('bom-editor-body').innerHTML='';
+
+  const comps = recipe?.components||[];
+  if(comps.length){
+    comps.forEach(c=>addBomRow(c));
+  } else {
+    addBomRow();
+  }
+  updateCostPreview();
+  document.getElementById('recipe-modal').classList.remove('hidden');
+}
+
+async function openRecipeModalById(id){
+  const r = await fetch('/api/composite-products/'+id).then(res=>res.json());
+  openRecipeModal(r);
+}
+
+function closeRecipeModal(){
+  document.getElementById('recipe-modal').classList.add('hidden');
+}
+
+function addBomRow(comp){
+  const idx = _bomRows++;
+  const tbody = document.getElementById('bom-editor-body');
+  const tr = document.createElement('tr');
+  const productOptions = (S._allProducts||[]).map(p=>
+    `<option value="${p.id}" data-unit="${p.unit||''}" data-cost="${p._unit_cost||0}" ${comp&&comp.product_id===p.id?'selected':''}>${p.name}</option>`
+  ).join('');
+  tr.innerHTML=`
+    <td style="min-width:200px">
+      <select class="field-input text-xs bom-product" data-row="${idx}" onchange="onBomProductChange(this,${idx})">
+        <option value="">— select product —</option>
+        ${productOptions}
+      </select>
+    </td>
+    <td><input type="number" min="0.001" step="any" class="field-input text-xs bom-qty" data-row="${idx}" value="${comp?.quantity||1}" oninput="updateCostPreview()"/></td>
+    <td><input type="text" class="field-input text-xs bom-unit" data-row="${idx}" value="${comp?.unit||comp?.product_unit||''}" placeholder="unit"/></td>
+    <td><button class="btn btn-sm bg-red-50 text-red-400 hover:bg-red-100 border-0 p-1" onclick="this.closest('tr').remove();updateCostPreview()"><i class="fas fa-times text-xs"></i></button></td>`;
+  tbody.appendChild(tr);
+}
+
+function onBomProductChange(sel, idx){
+  const opt = sel.options[sel.selectedIndex];
+  const unitInput = document.querySelector(`.bom-unit[data-row="${idx}"]`);
+  if(opt&&opt.value&&unitInput) unitInput.value = opt.dataset.unit||'';
+  updateCostPreview();
+}
+
+function updateCostPreview(){
+  let totalCost = 0;
+  document.querySelectorAll('#bom-editor-body tr').forEach(tr=>{
+    const sel = tr.querySelector('.bom-product');
+    const qty = parseFloat(tr.querySelector('.bom-qty')?.value)||0;
+    const pid = parseInt(sel?.value)||0;
+    const prod = (S._allProducts||[]).find(p=>p.id===pid);
+    if(prod&&qty) totalCost += qty * (prod._unit_cost||0);
+  });
+  const servings = parseInt(document.getElementById('rm-servings').value)||1;
+  const price    = parseFloat(document.getElementById('rm-price').value)||0;
+  const margin   = price>0 ? ((price-totalCost)/price*100).toFixed(1)+'%' : '—';
+  document.getElementById('rm-preview-cost').textContent       = eur(totalCost);
+  document.getElementById('rm-preview-margin').textContent     = margin;
+  document.getElementById('rm-preview-per-serving').textContent = servings>1?eur(totalCost/servings):'—';
+}
+
+async function saveRecipe(){
+  const name = document.getElementById('rm-name').value.trim();
+  if(!name){ alert('Recipe name is required.'); return; }
+  const components = [];
+  let valid = true;
+  document.querySelectorAll('#bom-editor-body tr').forEach(tr=>{
+    const pid = parseInt(tr.querySelector('.bom-product')?.value)||0;
+    const qty = parseFloat(tr.querySelector('.bom-qty')?.value)||0;
+    const unit= tr.querySelector('.bom-unit')?.value.trim()||'';
+    if(!pid||!qty){ valid=false; return; }
+    components.push({product_id:pid, quantity:qty, unit});
+  });
+  if(!valid){ alert('Each ingredient row must have a product and a quantity.'); return; }
+  if(!components.length){ alert('Add at least one ingredient.'); return; }
+
+  const id  = document.getElementById('rm-id').value;
+  const body = {
+    name,
+    category:      document.getElementById('rm-category').value.trim()||null,
+    selling_price: parseFloat(document.getElementById('rm-price').value)||null,
+    servings:      parseInt(document.getElementById('rm-servings').value)||1,
+    notes:         document.getElementById('rm-notes').value.trim()||null,
+    components,
+  };
+  const url    = id ? '/api/composite-products/'+id : '/api/composite-products';
+  const method = id ? 'PUT' : 'POST';
+  const res    = await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
+  if(res.error){ alert(res.error); return; }
+  closeRecipeModal();
+  await loadRecipes();
+  const newId = id ? parseInt(id) : res.id;
+  loadRecipeDetail(newId);
+}
+
+async function deleteRecipe(){
+  const r = S._currentRecipe;
+  if(!r) return;
+  if(!confirm(`Delete recipe "${r.name}"?`)) return;
+  await fetch('/api/composite-products/'+r.id,{method:'DELETE'});
+  closeRecipeDetail();
+  S._currentRecipe = null;
+  loadRecipes();
+}
+
+async function _loadProductsForBom(){
+  if(S._allProducts) return;
+  const prods = await fetch('/api/products/all').then(r=>r.json());
+  S._allProducts = prods.map(p=>({
+    ...p,
+    _unit_cost: p.current_price
+      ? (p.units_per_pack > 1 ? p.current_price / p.units_per_pack : p.current_price)
+      : 0,
+  }));
+}
+
+// ════════════════════════════════════════════════════════════════
+// DB BROWSER
+// ════════════════════════════════════════════════════════════════
+async function loadTables(){
+  S.tablesLoaded=true;
+  const tables=await fetch('/api/tables').then(r=>r.json());
+  document.getElementById('table-list').innerHTML=tables.map(t=>`
+    <div class="table-list-item" id="tli-${t.name}" onclick="browseTable('${t.name}',1)">
+      <span class="font-mono text-xs">${t.name}</span>
+      <span class="cnt">${t.count}</span>
+    </div>`).join('');
+}
+
+async function browseTable(name,page=1){
+  S.dbTable=name;S.dbPage=page;
+  document.querySelectorAll('.table-list-item').forEach(el=>el.classList.remove('selected'));
+  const tli=document.getElementById('tli-'+name);if(tli)tli.classList.add('selected');
+  document.getElementById('db-grid-empty').classList.add('hidden');
+  document.getElementById('db-grid-wrap').classList.remove('hidden');
+  document.getElementById('db-grid-title').textContent=name;
+  document.getElementById('db-grid-tbody').innerHTML=
+    '<tr><td colspan="20" class="text-center py-6"><div class="spinner mx-auto"></div></td></tr>';
+  const data=await fetch(`/api/table/${name}?page=${page}&per_page=50`).then(r=>r.json());
+  document.getElementById('db-grid-thead').innerHTML=
+    '<tr>'+data.columns.map(c=>`<th>${c.name}<span class="text-gray-400 ml-1 font-normal normal-case text-xs">${c.type}</span></th>`).join('')+'</tr>';
+  document.getElementById('db-grid-tbody').innerHTML=data.rows.map(row=>
+    '<tr>'+data.columns.map(c=>{
+      let v=row[c.name];
+      if(v===null||v===undefined)v='<span class="text-gray-300">null</span>';
+      else if(typeof v==='number')v=`<span class="text-blue-600">${v}</span>`;
+      else if(String(v).length>60)v=`<span title="${v}">${String(v).slice(0,60)}…</span>`;
+      return `<td>${v}</td>`;
+    }).join('')+'</tr>').join('');
+  const pages=Math.ceil(data.total/data.per_page);
+  document.getElementById('db-total-label').textContent=`${data.total} rows`;
+  document.getElementById('db-grid-info').textContent=`Page ${page} of ${pages}`;
+  document.getElementById('db-pg-btns').innerHTML=renderPagination(page,pages,`browseTable('${name}',$p)`);
+}
+
+// ════════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  loadProviders();
+  loadFilters();
+  loadDashboard();
+  setStep(1);
+});
+</script>
+</body>
+</html>
